@@ -7,6 +7,8 @@ Collection of unofficial API clients built by reverse-engineering websites' hidd
 | Site | Directory | Description |
 |---|---|---|
 | [AutoTempest](apis/autotempest/) | `apis/autotempest/` | Car listings across 10+ sources (eBay, Cars.com, Carvana, CarMax, etc.) |
+| [CarGurus](apis/cargurus/) | `apis/cargurus/` | Vehicle search, pricing, dealer info, instant market value (Cloudflare-protected) |
+| [Zillow](apis/zillow/) | `apis/zillow/` | Property autocomplete, geocoding, ZPID lookup, region search (PerimeterX-protected) |
 
 ## How These Are Built
 
@@ -22,12 +24,9 @@ Each client is created by:
 
 ```
 apis/
-  autotempest/
-    autotempest_client.py
-    README.md
-  {next-site}/
-    {site}_client.py
-    README.md
+  autotempest/        # Full API access (HMAC token auth cracked)
+  cargurus/           # Endpoints mapped, Cloudflare-protected
+  zillow/             # Autocomplete works, search PerimeterX-protected
 ```
 
 ## Disclaimer
