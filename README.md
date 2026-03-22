@@ -38,6 +38,9 @@ Collection of unofficial API clients built by reverse-engineering websites' hidd
 | Site | Directory | Status | Description |
 |---|---|---|---|
 | [Sociamonials](apis/marketing/sociamonials/) | `apis/marketing/sociamonials/` | Full access | Social media scheduling, campaigns, analytics, CRM, AI writer (session auth, login required) |
+| [NeuronWriter](apis/marketing/neuronwriter/) | `apis/marketing/neuronwriter/` | Auth required | SEO content optimization, SERP analysis, NLP terms, competitors (API key + session auth) |
+| [Taja AI](apis/marketing/taja/) | `apis/marketing/taja/` | Auth required | YouTube video optimization, titles, descriptions, tags, thumbnails (login required) |
+| [Skimming AI](apis/marketing/skimming/) | `apis/marketing/skimming/` | Auth required | Redirects to NeuronWriter -- same CONTADU platform, content summarization |
 
 ## Productivity
 
@@ -50,6 +53,12 @@ Collection of unofficial API clients built by reverse-engineering websites' hidd
 | Site | Directory | Status | Description |
 |---|---|---|---|
 | [Anna's Archive](apis/education/annas-archive/) | `apis/education/annas-archive/` | Full access | Book/publication search, ISBN/DOI lookup, metadata extraction (no auth required) |
+
+## Sports
+
+| Site | Directory | Status | Description |
+|---|---|---|---|
+| [Formula 1](apis/sports/formula1/) | `apis/sports/formula1/` | Full access | OpenF1 API -- sessions, drivers, lap times, telemetry, pit stops, weather (no auth required) |
 
 ## Structure
 
@@ -72,10 +81,15 @@ apis/
     producthunt/        # Full access, GraphQL v2, OAuth2 required
   marketing/
     sociamonials/       # Full access, PHP session auth
+    neuronwriter/       # SEO tool, API key + session auth (needs valid credentials)
+    taja/               # YouTube optimizer, login required (needs valid credentials)
+    skimming/           # Redirects to NeuronWriter (same platform)
   productivity/
     getrecall/          # Full access, 50+ endpoints, Firebase auth
   education/
     annas-archive/      # Full access, no auth, HTML parsing
+  sports/
+    formula1/           # Full access, OpenF1 API, no auth needed
 ```
 
 ## How These Are Built
