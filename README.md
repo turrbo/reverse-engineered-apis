@@ -20,6 +20,12 @@ Collection of unofficial API clients built by reverse-engineering websites' hidd
 | [Crexi](apis/real-estate/crexi/) | `apis/real-estate/crexi/` | Cloudflare-protected | 16 commercial real estate endpoints, property search, auctions, market data |
 | [PropertyShark](apis/real-estate/propertyshark/) | `apis/real-estate/propertyshark/` | Cloudflare-protected | 18 endpoints mapped, property data/ownership/tax records, requires paid subscription |
 
+## Entertainment
+
+| Site | Directory | Status | Description |
+|---|---|---|---|
+| [Artistly AI](apis/entertainment/artistly/) | `apis/entertainment/artistly/` | Full access | AI art generation -- T-shirt designs, storybooks, image stylization, 81+ styles (login required) |
+
 ## Structure
 
 ```
@@ -34,6 +40,8 @@ apis/
     loopnet/            # Commercial RE, Akamai Bot Manager blocks all access
     crexi/              # 16 endpoints, Cloudflare-protected
     propertyshark/      # 18 endpoints, Cloudflare + paid subscription required
+  entertainment/
+    artistly/           # Full access, login-based auth (Laravel/CSRF)
 ```
 
 ## How These Are Built
