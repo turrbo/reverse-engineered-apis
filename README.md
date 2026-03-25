@@ -37,7 +37,7 @@ Collection of unofficial API clients built by reverse-engineering websites' hidd
 
 | Site | Directory | Status | Description |
 |---|---|---|---|
-| [Sociamonials](apis/marketing/sociamonials/) | `apis/marketing/sociamonials/` | Full access | Social media scheduling, campaigns, analytics, CRM, AI writer (session auth, login required) |
+| [Sociamonials](apis/marketing/sociamonials/) | `apis/marketing/sociamonials/` | Full access | Social media post creation, scheduling, queue, drafts, analytics, CRM (session auth, login required) |
 | [NeuronWriter](apis/marketing/neuronwriter/) | `apis/marketing/neuronwriter/` | Auth required | SEO content optimization, SERP analysis, NLP terms, competitors (API key + session auth) |
 | [Taja AI](apis/marketing/taja/) | `apis/marketing/taja/` | Auth required | YouTube video optimization, titles, descriptions, tags, thumbnails (login required) |
 | [Skimming AI](apis/marketing/skimming/) | `apis/marketing/skimming/` | Auth required | Redirects to NeuronWriter -- same CONTADU platform, content summarization |

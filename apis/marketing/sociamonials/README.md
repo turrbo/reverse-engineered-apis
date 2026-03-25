@@ -6,6 +6,9 @@ An unofficial Python client for interacting with the Sociamonials.com social med
 
 Sociamonials is a social media scheduling and management platform. This client provides programmatic access to key features including:
 
+- **Post creation** (publish now, queue, schedule, draft)
+- **Post to X/Twitter** with 280-char validation
+- **Media attachments** (images/video)
 - Social media post management (queue, sent, drafts)
 - Calendar view
 - Reports and analytics
@@ -30,10 +33,10 @@ The API uses session-based authentication via cookies. The client handles login 
 
 ## Installation
 
-The client requires Python 3.7+ and the `requests` library:
+The client requires Python 3.7+ and:
 
 ```bash
-pip install requests
+pip install requests beautifulsoup4
 ```
 
 ## Usage
@@ -61,6 +64,51 @@ sent_posts = client.get_sent_posts(length=10)
 print(f"Total sent: {sent_posts['recordsTotal']}")
 
 # Logout
+client.logout()
+```
+
+### Post Creation
+
+```python
+from sociamonials_client import SociamonialAPI
+
+client = SociamonialAPI(
+    username="your_username",
+    password="your_password"
+)
+client.login()
+
+# Publish immediately to X/Twitter
+result = client.publish_now(
+    message="Hello from the API!",
+    account_ids=[SociamonialAPI.TWITTER_ACCOUNT_ID]
+)
+# Returns: {"status": "success", "posts": [{"postid": 123, "network": {"twitter": "1", ...}}]}
+
+# Post to Twitter (convenience method with 280-char validation)
+result = client.post_to_twitter(message="My tweet text")
+
+# Schedule a post
+result = client.schedule_post(
+    message="Scheduled tweet",
+    schedule_date="03/25/2026",
+    schedule_time="10:00 AM",
+    account_ids=[SociamonialAPI.TWITTER_ACCOUNT_ID]
+)
+
+# Add to queue
+result = client.add_to_queue(message="Queued tweet")
+
+# Save as draft
+result = client.save_draft(message="Draft tweet")
+
+# Post with image
+result = client.publish_now(
+    message="Check this out!",
+    account_ids=[SociamonialAPI.TWITTER_ACCOUNT_ID],
+    media_path="/path/to/image.png"
+)
+
 client.logout()
 ```
 
@@ -143,6 +191,50 @@ Get published/sent posts.
 
 #### `get_draft_posts(start=0, length=10)`
 Get draft posts.
+
+---
+
+### Post Creation
+
+#### `publish_now(message, account_ids=None, media_path=None)`
+Publish a post immediately via AJAX POST.
+
+**Parameters:**
+- `message` (str): Post text
+- `account_ids` (list): Account IDs to post to (default: Twitter)
+- `media_path` (str): Optional path to image/video file
+
+**Returns:** Dict with `status`, `posts` (array of `{postid, network}`)
+
+**Endpoint:** `POST /accounts/post_to_social_ajax.php`
+
+#### `post_to_twitter(message, schedule_time=None, media_path=None)`
+Convenience method for X/Twitter. Validates 280-char limit.
+
+**Parameters:**
+- `message` (str): Tweet text (max 280 chars)
+- `schedule_time` (str): Optional ISO datetime (e.g., '2026-03-25T10:00:00')
+- `media_path` (str): Optional image/video path
+
+#### `add_to_queue(message, account_ids=None, media_path=None)`
+Add a post to the publishing queue (schedule_type=5).
+
+#### `schedule_post(message, schedule_date, schedule_time, account_ids=None, media_path=None)`
+Schedule a post for a specific date/time (schedule_type=2).
+
+**Parameters:**
+- `schedule_date` (str): Date (e.g., '03/25/2026')
+- `schedule_time` (str): Time (e.g., '10:00 AM')
+
+#### `save_draft(message, account_ids=None, media_path=None)`
+Save a post as draft (schedule_type=1, publish_status=0).
+
+#### Account IDs
+```python
+SociamonialAPI.TWITTER_ACCOUNT_ID  = '17019'
+SociamonialAPI.LINKEDIN_ACCOUNT_ID = '14029_0_0'
+SociamonialAPI.PINTEREST_ACCOUNT_ID = '9313'
+```
 
 ---
 
@@ -233,6 +325,8 @@ https://www.sociamonials.com
 - `GET /accounts/customer_photos.php` - Customer photos
 
 ### AJAX/API Endpoints
+- `POST /accounts/post_to_social_ajax.php` - **Publish post immediately** (AJAX, returns JSON)
+- `POST /accounts/social_media.php` - **Create post** (form POST for queue/schedule/draft)
 - `POST /accounts/grid_data.php` - DataTables endpoint for posts (queue, sent, drafts)
 - `POST /accounts/get_heartbit.php` - Session heartbeat/extension
 - `POST /accounts/ajax_common.php` - Common AJAX operations
@@ -286,6 +380,25 @@ The `grid_data.php` endpoint uses these parameters:
 }]
 ```
 
+### Publish Now Response
+```json
+[{
+  "postid": 9358113,
+  "network": {
+    "facebook": "0",
+    "twitter": "1",
+    "linkedin": "0",
+    "instagram": "0",
+    "bluesky": "0",
+    "threads": "0",
+    "gmb": "0",
+    "pinterest": "0",
+    "tiktok": "0",
+    "youtube": "0"
+  }
+}]
+```
+
 ### Posts Response (DataTables)
 ```json
 {
@@ -301,6 +414,13 @@ The `grid_data.php` endpoint uses these parameters:
 ### Supported Operations
 - ✅ Authentication (login/logout)
 - ✅ Session management (heartbeat)
+- ✅ **Create new posts** (publish now via AJAX)
+- ✅ **Schedule posts** (specific date/time)
+- ✅ **Queue posts** (add to publishing queue)
+- ✅ **Save drafts**
+- ✅ **Upload media/assets** (images, video)
+- ✅ **Post to X/Twitter** (with 280-char validation)
+- ✅ Post to LinkedIn, Pinterest (multi-platform)
 - ✅ Retrieve queued posts
 - ✅ Retrieve sent posts
 - ✅ Retrieve draft posts
@@ -313,15 +433,10 @@ The `grid_data.php` endpoint uses these parameters:
 - ✅ Access integrations
 
 ### Not Yet Implemented
-- ❌ Create new posts
 - ❌ Update existing posts
 - ❌ Delete posts
-- ❌ Upload media/assets
-- ❌ Schedule posts
 - ❌ Manage campaigns
 - ❌ Parse HTML responses from page endpoints
-
-These features require additional reverse engineering to discover the exact API endpoints and payload formats.
 
 ## Technical Details
 
@@ -342,6 +457,30 @@ The client uses these headers to mimic browser behavior:
     'Referer': 'https://www.sociamonials.com/accounts/social_media.php'
 }
 ```
+
+### Post Creation via Dashboard Form Parsing
+
+The post creation endpoint (`post_to_social_ajax.php`) requires ALL 230+ fields from the dashboard's `#f1` form (submitted via `$('#f1').serialize()`). Sending only the essential fields results in an empty response.
+
+The client handles this by:
+1. Loading the dashboard page (`/accounts/social_media.php`)
+2. Parsing all default form field values using BeautifulSoup
+3. Overriding only the fields we need (message, accounts, schedule_type, etc.)
+4. Serializing the full form data for submission
+
+**Two submission paths:**
+- **Publish Now** (schedule_type=1, publish_status=1): AJAX POST to `post_to_social_ajax.php` with `sm_ajax_publish_type=1&{serialized_form}`. Returns JSON.
+- **Queue/Schedule/Draft**: Standard form POST to `social_media.php` with multipart form data. Returns redirect to dashboard.
+
+**Key form fields:**
+- `message`: Post text
+- `select_accounts[]`: Checkbox values for platform selection
+- `tw_selected_ids`: Twitter account ID(s)
+- `schedule_type`: 1=publish, 2=schedule, 4=optimal, 5=queue
+- `publish_status`: 1=publish now, 0=queue/draft/schedule
+- `publish_socialmedia`: 'add' (action indicator)
+- `edit_tw_message`: Per-platform message override for Twitter
+- `asset_image_social_network[]`: Media file upload
 
 ### DataTables Integration
 Many endpoints use the DataTables server-side processing format. The client automatically formats requests with proper pagination, sorting, and filtering parameters.
@@ -370,8 +509,9 @@ This is an **unofficial** reverse-engineered client. Be aware:
 1. The API is undocumented and may change without notice
 2. Rate limiting is unknown - use responsibly
 3. Some endpoints return HTML instead of JSON (calendar, reports, etc.)
-4. Not all features are implemented (creating posts, file uploads, etc.)
-5. No official API documentation exists
+4. Post creation requires loading the full dashboard page (230+ form fields) on first call
+5. Account IDs are hardcoded from discovery - may differ per Sociamonials account
+6. No official API documentation exists
 
 ## Example Output
 
