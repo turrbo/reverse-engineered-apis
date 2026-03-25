@@ -60,6 +60,13 @@ Collection of unofficial API clients built by reverse-engineering websites' hidd
 |---|---|---|---|
 | [Canyon](apis/jobs/canyon/) | `apis/jobs/canyon/` | Full access | GraphQL API -- 49 queries, 90 mutations, job search, AI resumes/cover letters, interview prep (Google OAuth) |
 
+## Weather
+
+| Site | Directory | Status | Description |
+|---|---|---|---|
+| [Weather.gov (NWS)](apis/weather/weather-gov/) | `apis/weather/weather-gov/` | Full access | 54 endpoints -- forecasts, alerts, stations, radar, aviation, products (no auth required) |
+| [NOAA WPC](apis/weather/noaa-wpc/) | `apis/weather/noaa-wpc/` | Full access | Surface analysis, QPF, winter weather, ERO, discussions, forecast charts (no auth required) |
+
 ## Sports
 
 | Site | Directory | Status | Description |
@@ -96,6 +103,9 @@ apis/
     annas-archive/      # Full access, no auth, HTML parsing
   jobs/
     canyon/             # Full access, GraphQL, 49 queries + 90 mutations, Google OAuth
+  weather/
+    weather-gov/        # Full access, 54 NWS endpoints, no auth needed
+    noaa-wpc/           # Full access, surface analysis, QPF, forecasts, no auth
   sports/
     formula1/           # Full access, OpenF1 API, no auth needed
 ```
