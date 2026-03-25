@@ -66,6 +66,21 @@ Collection of unofficial API clients built by reverse-engineering websites' hidd
 |---|---|---|---|
 | [Weather.gov (NWS)](apis/weather/weather-gov/) | `apis/weather/weather-gov/` | Full access | 54 endpoints -- forecasts, alerts, stations, radar, aviation, products (no auth required) |
 | [NOAA WPC](apis/weather/noaa-wpc/) | `apis/weather/noaa-wpc/` | Full access | Surface analysis, QPF, winter weather, ERO, discussions, forecast charts (no auth required) |
+| [Windy.com](apis/weather/windy/) | `apis/weather/windy/` | Full access | ECMWF/GFS/NAM/ICON models, radar coverage (1000+ stations), city tiles, geolocation (custom Accept header auth) |
+| [Tropical Tidbits](apis/weather/tropical-tidbits/) | `apis/weather/tropical-tidbits/` | Full access | 29 forecast models, storm tracking, soundings, satellite imagery CDN, ocean/SST analysis (no auth required) |
+| [Pivotal Weather](apis/weather/pivotal-weather/) | `apis/weather/pivotal-weather/` | Partial access | 29+ models, image servers public, JSON API AWS WAF-protected (no auth for images) |
+| [RainViewer](apis/weather/rainviewer/) | `apis/weather/rainviewer/` | Full access | 1016 radar stations (83 countries), satellite tiles, severe alerts, storm tracking (session token auth) |
+| [Weather Underground](apis/weather/wunderground/) | `apis/weather/wunderground/` | Full access | 30+ endpoints, 250K+ PWS stations, 86 tile products, 15-day forecasts (API keys from SSR) |
+| [Ventusky](apis/weather/ventusky/) | `apis/weather/ventusky/` | Full access | 17 endpoints, 38 weather models, 50+ layers, weather fronts, webcams (no auth required) |
+| [SpotWX](apis/weather/spotwx/) | `apis/weather/spotwx/` | Full access | 13 gridded NWP models, multi-model point forecasts, Highcharts data parsing (no auth required) |
+| [LightningMaps](apis/weather/lightningmaps/) | `apis/weather/lightningmaps/` | Full access | Real-time global lightning via WebSocket, 2000+ stations, tiles, archive (challenge-response auth cracked) |
+| [College of DuPage NEXLAB](apis/weather/cod-nexlab/) | `apis/weather/cod-nexlab/` | Full access | NEXRAD radar (18+ products), GOES satellite (16 bands), 11 models, NWS warnings JSON (no auth required) |
+| [OpenSnow](apis/weather/opensnow/) | `apis/weather/opensnow/` | Full access | Snow forecasts, resort data, avalanche danger, webcams, powder maps (API key from Nuxt config) |
+| [Zoom Earth](apis/weather/zoom-earth/) | `apis/weather/zoom-earth/` | Full access | Satellite tiles (GOES/Himawari/MSG/MTG), radar, fires, storms (ROT-13/base64 obfuscation + HMAC sig cracked) |
+| [Meteoblue](apis/weather/meteoblue/) | `apis/weather/meteoblue/` | Full access | Multimodel forecasts, ERA5T historical (1940+), air quality, maps, meteograms (API keys from JS) |
+| [AerisWeather/Xweather](apis/weather/aerisweather/) | `apis/weather/aerisweather/` | Auth required | 55 endpoints -- alerts, lightning, fire, maritime, tropical, air quality, road weather (client_id/secret required) |
+| [World Weather Online](apis/weather/worldweatheronline/) | `apis/weather/worldweatheronline/` | Partial access | 9 internal AJAX endpoints (no key) + 7 premium REST endpoints, historical data 2008+ (ASP.NET hidden fields) |
+| [Open-Meteo](apis/weather/open-meteo/) | `apis/weather/open-meteo/` | Full access | 13 API subdomains (4 undocumented), 200+ models incl. AI, satellite data since 1983 (no auth required) |
 
 ## Sports
 
@@ -106,6 +121,21 @@ apis/
   weather/
     weather-gov/        # Full access, 54 NWS endpoints, no auth needed
     noaa-wpc/           # Full access, surface analysis, QPF, forecasts, no auth
+    windy/              # ECMWF/GFS/NAM/ICON, radar, city tiles, custom Accept header
+    tropical-tidbits/   # 29 models, storms, soundings, satellite CDN, ocean analysis
+    pivotal-weather/    # 29+ models, public image servers, WAF-protected JSON API
+    rainviewer/         # 1016 radar stations, satellite, alerts, session token auth
+    wunderground/       # 30+ endpoints, 250K+ PWS, 86 tile products, API keys from SSR
+    ventusky/           # 38 models, 50+ layers, fronts, webcams, no auth
+    spotwx/             # 13 NWP models, multi-model point forecasts, no auth
+    lightningmaps/      # Real-time lightning WebSocket, 2000+ stations, challenge-response
+    cod-nexlab/         # NEXRAD 18+ products, GOES 16 bands, 11 models, NWS warnings
+    opensnow/           # Snow forecasts, resort data, avalanche, API key from Nuxt
+    zoom-earth/         # Satellite GOES/Himawari/MSG, radar, fires, HMAC sig cracked
+    meteoblue/          # Multimodel, ERA5T since 1940, API keys from JS bundles
+    aerisweather/       # 55 endpoints, rebranded to Xweather, client_id/secret auth
+    worldweatheronline/ # 9 AJAX + 7 REST endpoints, historical 2008+, ASP.NET
+    open-meteo/         # 13 subdomains (4 undocumented), 200+ models, satellite data
   sports/
     formula1/           # Full access, OpenF1 API, no auth needed
 ```
