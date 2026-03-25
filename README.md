@@ -54,6 +54,12 @@ Collection of unofficial API clients built by reverse-engineering websites' hidd
 |---|---|---|---|
 | [Anna's Archive](apis/education/annas-archive/) | `apis/education/annas-archive/` | Full access | Book/publication search, ISBN/DOI lookup, metadata extraction (no auth required) |
 
+## Jobs
+
+| Site | Directory | Status | Description |
+|---|---|---|---|
+| [Canyon](apis/jobs/canyon/) | `apis/jobs/canyon/` | Full access | GraphQL API -- 49 queries, 90 mutations, job search, AI resumes/cover letters, interview prep (Google OAuth) |
+
 ## Sports
 
 | Site | Directory | Status | Description |
@@ -88,6 +94,8 @@ apis/
     getrecall/          # Full access, 50+ endpoints, Firebase auth
   education/
     annas-archive/      # Full access, no auth, HTML parsing
+  jobs/
+    canyon/             # Full access, GraphQL, 49 queries + 90 mutations, Google OAuth
   sports/
     formula1/           # Full access, OpenF1 API, no auth needed
 ```
