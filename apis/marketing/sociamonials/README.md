@@ -8,6 +8,9 @@ Sociamonials is a social media scheduling and management platform. This client p
 
 - **Post creation** (publish now, queue, schedule, draft)
 - **Post to X/Twitter** with 280-char validation
+- **Post to LinkedIn** with image upload support
+- **Post to Pinterest** with affiliate link support
+- **Image upload** to asset library
 - **Media attachments** (images/video)
 - Social media post management (queue, sent, drafts)
 - Calendar view
@@ -107,6 +110,49 @@ result = client.publish_now(
     message="Check this out!",
     account_ids=[SociamonialAPI.TWITTER_ACCOUNT_ID],
     media_path="/path/to/image.png"
+)
+
+client.logout()
+```
+
+### LinkedIn Posts
+
+```python
+from sociamonials_client import SociamonialAPI
+
+client = SociamonialAPI(username="your_username", password="your_password")
+client.login()
+
+# Publish immediately to LinkedIn (text only)
+result = client.post_to_linkedin(
+    message="Excited to share our latest company update with my network!"
+)
+# Returns: {"status": "success", "posts": [{"postid": 9358170, "network": {"linkedin": "1", ...}}]}
+
+# Publish to LinkedIn with an image (auto-uploads then attaches)
+result = client.post_to_linkedin(
+    message="Check out this infographic!",
+    image_path="/path/to/infographic.jpg"
+)
+
+# Schedule a LinkedIn post
+result = client.post_to_linkedin(
+    message="Join us for our upcoming webinar!",
+    schedule_time="2026-04-01T10:00:00"
+)
+
+# Manual two-step: upload image first, then post
+upload = client.upload_image("/path/to/photo.jpg")
+# upload returns: {"id": "...", "name": "...", "loc": "filename.jpg", "width": 1200, "height": 628}
+result = client.post_to_linkedin(
+    message="Here is our team photo!",
+    image_filename=upload["loc"]
+)
+
+# Save LinkedIn post as draft
+result = client.save_draft(
+    message="LinkedIn draft post",
+    account_ids=[SociamonialAPI.LINKEDIN_ACCOUNT_ID]
 )
 
 client.logout()
@@ -216,24 +262,54 @@ Convenience method for X/Twitter. Validates 280-char limit.
 - `schedule_time` (str): Optional ISO datetime (e.g., '2026-03-25T10:00:00')
 - `media_path` (str): Optional image/video path
 
-#### `add_to_queue(message, account_ids=None, media_path=None)`
+#### `post_to_linkedin(message, schedule_time=None, image_path=None, image_filename=None)`
+Convenience method for LinkedIn. Validates 3000-char limit. Automatically uploads images.
+
+**Parameters:**
+- `message` (str): Post text (max 3000 chars)
+- `schedule_time` (str): Optional ISO datetime (e.g., '2026-04-01T10:00:00')
+- `image_path` (str): Optional local image path (auto-uploaded via `upload_image()`)
+- `image_filename` (str): Optional pre-uploaded image 'loc' value (from `upload_image()`)
+
+**Returns:** Dict with `status`, `posts` (array of `{postid, network}`) for publish now.
+Schedule/queue returns `{status, message, redirect_url}`.
+
+#### `upload_image(image_path)`
+Upload an image to the Sociamonials asset library. Returns the 'loc' filename for attaching to posts.
+
+**Parameters:**
+- `image_path` (str): Local path to image file (JPEG, PNG, GIF, WebP)
+
+**Returns:** Dict with keys `id`, `name`, `loc`, `width`, `height`
+
+**Endpoint:** `POST /accounts/asset_library_image_update.php`
+
+**Example:**
+```python
+upload = client.upload_image('/path/to/photo.jpg')
+print(upload['loc'])  # filename to use as image_filename in post methods
+```
+
+#### `add_to_queue(message, account_ids=None, media_path=None, image_filename=None)`
 Add a post to the publishing queue (schedule_type=5).
 
-#### `schedule_post(message, schedule_date, schedule_time, account_ids=None, media_path=None)`
+#### `schedule_post(message, schedule_date, schedule_time, account_ids=None, media_path=None, image_filename=None)`
 Schedule a post for a specific date/time (schedule_type=2).
 
 **Parameters:**
 - `schedule_date` (str): Date (e.g., '03/25/2026')
 - `schedule_time` (str): Time (e.g., '10:00 AM')
+- `image_filename` (str): Optional pre-uploaded image 'loc' value from `upload_image()`
 
-#### `save_draft(message, account_ids=None, media_path=None)`
+#### `save_draft(message, account_ids=None, media_path=None, image_filename=None)`
 Save a post as draft (schedule_type=1, publish_status=0).
 
 #### Account IDs
 ```python
-SociamonialAPI.TWITTER_ACCOUNT_ID  = '17019'
-SociamonialAPI.LINKEDIN_ACCOUNT_ID = '14029_0_0'
-SociamonialAPI.PINTEREST_ACCOUNT_ID = '9313'
+SociamonialAPI.TWITTER_ACCOUNT_ID    = '17019'
+SociamonialAPI.LINKEDIN_ACCOUNT_ID   = '14029_0_0'   # for select_accounts[]
+SociamonialAPI.LINKEDIN_SELECTED_IDS = '14029|0|0'   # pipe-separated for ln_selected_ids
+SociamonialAPI.PINTEREST_ACCOUNT_ID  = '9313'
 ```
 
 ---
@@ -325,14 +401,13 @@ https://www.sociamonials.com
 - `GET /accounts/customer_photos.php` - Customer photos
 
 ### AJAX/API Endpoints
-- `POST /accounts/post_to_social_ajax.php` - **Publish post immediately** (AJAX, returns JSON)
-- `POST /accounts/social_media.php` - **Create post** (form POST for queue/schedule/draft)
+- `POST /accounts/post_to_social_ajax.php` - **All post creation** (publish/queue/schedule/draft, AJAX, returns JSON)
+- `POST /accounts/asset_library_image_update.php` - **Upload image** to asset library (returns {id, name, loc, width, height})
 - `POST /accounts/grid_data.php` - DataTables endpoint for posts (queue, sent, drafts)
 - `POST /accounts/get_heartbit.php` - Session heartbeat/extension
 - `POST /accounts/ajax_common.php` - Common AJAX operations
 - `POST /accounts/grid_updatedata.php` - Update post data
 - `POST /accounts/grid_deletedata.php` - Delete post data
-- `POST /accounts/asset_library_image_update.php` - Update asset library images
 - `GET /accounts/display_customer_video.php` - Display customer video
 - `GET /accounts/change_link.php` - Change link
 - `GET /accounts/social_media_display_photo.php` - Display photo
@@ -380,14 +455,14 @@ The `grid_data.php` endpoint uses these parameters:
 }]
 ```
 
-### Publish Now Response
+### Publish Now Response (sm_ajax_publish_type=1)
 ```json
 [{
-  "postid": 9358113,
+  "postid": 9358170,
   "network": {
     "facebook": "0",
-    "twitter": "1",
-    "linkedin": "0",
+    "twitter": "0",
+    "linkedin": "1",
     "instagram": "0",
     "bluesky": "0",
     "threads": "0",
@@ -398,6 +473,32 @@ The `grid_data.php` endpoint uses these parameters:
   }
 }]
 ```
+
+### Queue/Schedule/Draft Response (sm_ajax_publish_type=2,3,4,5)
+```json
+[{
+  "refid": "12345",
+  "msg": "2"
+}]
+```
+
+Response `msg` codes:
+- `"1"`: Verification report / duplicate check triggered
+- `"2"`: Successfully queued or scheduled
+- `"8"`: Draft saved successfully
+
+### Image Upload Response (asset_library_image_update.php)
+```json
+{
+  "id": "98765",
+  "name": "photo.jpg",
+  "loc": "2026/03/25/photo_1743000000.jpg",
+  "width": "1200",
+  "height": "628"
+}
+```
+
+The `loc` field is the filename to pass as `image_filename` to post creation methods.
 
 ### Posts Response (DataTables)
 ```json
@@ -414,13 +515,14 @@ The `grid_data.php` endpoint uses these parameters:
 ### Supported Operations
 - ✅ Authentication (login/logout)
 - ✅ Session management (heartbeat)
-- ✅ **Create new posts** (publish now via AJAX)
+- ✅ **Create new posts** (publish now, queue, schedule, draft)
 - ✅ **Schedule posts** (specific date/time)
 - ✅ **Queue posts** (add to publishing queue)
 - ✅ **Save drafts**
-- ✅ **Upload media/assets** (images, video)
+- ✅ **Upload images** to asset library (`upload_image()`)
 - ✅ **Post to X/Twitter** (with 280-char validation)
-- ✅ Post to LinkedIn, Pinterest (multi-platform)
+- ✅ **Post to LinkedIn** (with image upload support, 3000-char validation)
+- ✅ **Post to Pinterest** (with affiliate link and board selection)
 - ✅ Retrieve queued posts
 - ✅ Retrieve sent posts
 - ✅ Retrieve draft posts
@@ -468,19 +570,33 @@ The client handles this by:
 3. Overriding only the fields we need (message, accounts, schedule_type, etc.)
 4. Serializing the full form data for submission
 
-**Two submission paths:**
-- **Publish Now** (schedule_type=1, publish_status=1): AJAX POST to `post_to_social_ajax.php` with `sm_ajax_publish_type=1&{serialized_form}`. Returns JSON.
-- **Queue/Schedule/Draft**: Standard form POST to `social_media.php` with multipart form data. Returns redirect to dashboard.
+**All 5 post creation flows use `post_to_social_ajax.php`** with `sm_ajax_publish_type` controlling the action:
+- `sm_ajax_publish_type=1` → Publish Now → returns `[{postid, network}]`
+- `sm_ajax_publish_type=2` → Add to Queue → returns `[{refid, msg}]` (msg='2' = success)
+- `sm_ajax_publish_type=3` → Schedule → returns `[{refid, msg}]` (msg='2' = success)
+- `sm_ajax_publish_type=4` → Optimal Time → returns `[{refid, msg}]`
+- `sm_ajax_publish_type=5` → Save Draft → returns `[{refid, msg}]` (msg='8' = draft saved)
 
 **Key form fields:**
 - `message`: Post text
 - `select_accounts[]`: Checkbox values for platform selection
-- `tw_selected_ids`: Twitter account ID(s)
+- `tw_selected_ids`: Twitter account ID(s) comma-separated
+- `ln_selected_ids`: LinkedIn account ID in pipe-separated format (e.g. `14029|0|0`)
+- `pi_selected_ids`: Pinterest account ID(s)
 - `schedule_type`: 1=publish, 2=schedule, 4=optimal, 5=queue
 - `publish_status`: 1=publish now, 0=queue/draft/schedule
 - `publish_socialmedia`: 'add' (action indicator)
-- `edit_tw_message`: Per-platform message override for Twitter
-- `asset_image_social_network[]`: Media file upload
+- `edit_ln_message`: Per-platform message override for LinkedIn
+- `asset_image_social_network[]`: Media file upload (multipart)
+
+**LinkedIn image attachment fields** (after uploading via `asset_library_image_update.php`):
+- `social_add_from_library_val`: The uploaded image filename ('loc' from upload response)
+- `attach_video_type`: '4' (indicates image attachment)
+- `sm_ln_attach_media`: '1' (enables LinkedIn media)
+
+**LinkedIn account ID format:**
+- `select_accounts[]` uses underscore format: `14029_0_0`
+- `ln_selected_ids` uses pipe-separated format: `14029|0|0`
 
 ### DataTables Integration
 Many endpoints use the DataTables server-side processing format. The client automatically formats requests with proper pagination, sorting, and filtering parameters.
@@ -509,9 +625,10 @@ This is an **unofficial** reverse-engineered client. Be aware:
 1. The API is undocumented and may change without notice
 2. Rate limiting is unknown - use responsibly
 3. Some endpoints return HTML instead of JSON (calendar, reports, etc.)
-4. Post creation requires loading the full dashboard page (230+ form fields) on first call
+4. Post creation requires loading the full dashboard page (230+ form fields) on first call to build defaults
 5. Account IDs are hardcoded from discovery - may differ per Sociamonials account
 6. No official API documentation exists
+7. LinkedIn image attachment requires a two-step process: upload first via `upload_image()`, then reference the `loc` filename when creating the post
 
 ## Example Output
 
