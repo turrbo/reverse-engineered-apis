@@ -82,6 +82,12 @@ Collection of unofficial API clients built by reverse-engineering websites' hidd
 | [World Weather Online](apis/weather/worldweatheronline/) | `apis/weather/worldweatheronline/` | Partial access | 9 internal AJAX endpoints (no key) + 7 premium REST endpoints, historical data 2008+ (ASP.NET hidden fields) |
 | [Open-Meteo](apis/weather/open-meteo/) | `apis/weather/open-meteo/` | Full access | 13 API subdomains (4 undocumented), 200+ models incl. AI, satellite data since 1983 (no auth required) |
 
+## Design
+
+| Site | Directory | Status | Description |
+|---|---|---|---|
+| [MyDesigns.io](apis/design/mydesigns/) | `apis/design/mydesigns/` | Full access | 178 endpoints -- POD products, orders, mockups, AI tools, canvas editor, shop integrations (Etsy/Shopify/Amazon/TikTok), wallets (Ory auth, login required) |
+
 ## Sports
 
 | Site | Directory | Status | Description |
@@ -136,6 +142,8 @@ apis/
     aerisweather/       # 55 endpoints, rebranded to Xweather, client_id/secret auth
     worldweatheronline/ # 9 AJAX + 7 REST endpoints, historical 2008+, ASP.NET
     open-meteo/         # 13 subdomains (4 undocumented), 200+ models, satellite data
+  design/
+    mydesigns/          # Full access, 178 endpoints, Ory auth, POD platform
   sports/
     formula1/           # Full access, OpenF1 API, no auth needed
 ```
