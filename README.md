@@ -88,6 +88,31 @@ Collection of unofficial API clients built by reverse-engineering websites' hidd
 |---|---|---|---|
 | [MyDesigns.io](apis/design/mydesigns/) | `apis/design/mydesigns/` | Full access | 178 endpoints -- POD products, orders, mockups, AI tools, canvas editor, shop integrations (Etsy/Shopify/Amazon/TikTok), wallets (Ory auth, login required) |
 
+## Cameras & Webcams
+
+| Site | Directory | Status | Description |
+|---|---|---|---|
+| [Windy Webcams](apis/cameras/windy-webcams/) | `apis/cameras/windy-webcams/` | Auth required | 100K+ webcams, v3 REST API, 18 categories, map clusters, player embeds (API key required) |
+| [AlertWildfire](apis/cameras/alertwildfire/) | `apis/cameras/alertwildfire/` | Full access | 2,200+ wildfire/fire cameras (128 AWF + 2,072 AlertCalifornia), MJPEG timelapse, panoramic grid (Referer auth) |
+| [USGS Volcano Webcams](apis/cameras/usgs-volcanocams/) | `apis/cameras/usgs-volcanocams/` | Full access | 5 API systems, 400+ cameras (HVO + AVO + CVO + YVO), HANS notice search, volcanic activity detection (no auth) |
+| [NOAA Cams](apis/cameras/noaa-cams/) | `apis/cameras/noaa-cams/` | Full access | GOES satellite CDN (up to 10848x10848), 90+ BuoyCAMs, realtime + historical marine data (no auth) |
+| [WeatherBug Cameras](apis/cameras/weatherbug-cams/) | `apis/cameras/weatherbug-cams/` | Full access | 13 API endpoints, cameras + traffic + weather + maps, 17 map layers (HMAC-SHA256 auth cracked) |
+| [EarthCam](apis/cameras/earthcam/) | `apis/cameras/earthcam/` | Full access | 298+ landmark cameras, 12 endpoints, signed HLS streams, timelapse archives, bounding box search (no auth) |
+| [Surfline](apis/cameras/surfline/) | `apis/cameras/surfline/` | Full access | 500+ surf cameras, wave/wind/tide forecasts, CDN stills + rewind clips, spot reports (Origin header auth) |
+| [FAA WeatherCams](apis/cameras/faa-weathercams/) | `apis/cameras/faa-weathercams/` | Full access | 232 aviation weather cameras (Alaska-heavy), METAR/TAF data, image archives (no auth) |
+| [Skiresort.info Webcams](apis/cameras/skiresort-webcams/) | `apis/cameras/skiresort-webcams/` | Full access | 5,900+ ski resort webcams, snow reports, resort metadata, multi-country coverage (no auth) |
+| [SkylineWebcams](apis/cameras/skylinewebcams/) | `apis/cameras/skylinewebcams/` | Full access | Thousands of webcams, 50+ countries, HLS streams, categories (beaches/volcanoes/cities), timelapse (no auth) |
+| [WebcamGalore](apis/cameras/webcamgalore/) | `apis/cameras/webcamgalore/` | Full access | 8,000+ webcams, XML bounding box API, 30 theme filters, 365-day daily archives, hourly timelapse (no auth) |
+| [Foto-Webcam.eu](apis/cameras/foto-webcam/) | `apis/cameras/foto-webcam/` | Full access | 398 Alpine webcams, up to 6000x4000 resolution, PHP JSON API, historical archives, EXIF data (no auth) |
+| [HDOnTap](apis/cameras/hdontap/) | `apis/cameras/hdontap/` | Full access | 203 HD streams (wildlife/scenic/beach), Wowza SecureToken HLS up to 4K, timelapse (no auth) |
+| [explore.org](apis/cameras/explore-org/) | `apis/cameras/explore-org/` | Full access | 100+ wildlife/nature cameras (bears, birds, ocean), YouTube HLS streams, categories (no auth) |
+| [NPS Webcams](apis/cameras/nps-webcams/) | `apis/cameras/nps-webcams/` | Full access | 290 National Park cameras + 22 air quality webcams, archive since 2005, AQ timeseries (DEMO_KEY works) |
+| [DOT 511 (8 States)](apis/cameras/dot-511/) | `apis/cameras/dot-511/` | Auth required | 2,923+ DOT traffic cameras (NY/WI/PA/AK/UT/MN/VA/IA), HLS streams, unified Iteris platform (free API key) |
+| [Oregon TripCheck](apis/cameras/oregon-tripcheck/) | `apis/cameras/oregon-tripcheck/` | Full access | 1,120 cameras (321 video), 221 RWIS weather stations, road conditions, travel times (no auth) |
+| [WSDOT](apis/cameras/wsdot/) | `apis/cameras/wsdot/` | Full access | 1,658 cameras, RSS/KML feeds, mountain pass conditions, image URL pattern cracked (no auth for feeds) |
+| [Camscape](apis/cameras/camscape/) | `apis/cameras/camscape/` | Full access | 1,325 webcams, WordPress REST + SAYT search, world map geo data, stream types (no auth) |
+| [Opentopia](apis/cameras/opentopia/) | `apis/cameras/opentopia/` | Full access | 1,432+ public cameras, geographic search, random camera, categories (no auth) |
+
 ## Sports
 
 | Site | Directory | Status | Description |
@@ -142,6 +167,27 @@ apis/
     aerisweather/       # 55 endpoints, rebranded to Xweather, client_id/secret auth
     worldweatheronline/ # 9 AJAX + 7 REST endpoints, historical 2008+, ASP.NET
     open-meteo/         # 13 subdomains (4 undocumented), 200+ models, satellite data
+  cameras/
+    windy-webcams/      # 100K+ webcams, v3 REST API, API key required
+    alertwildfire/      # 2,200+ wildfire cameras, Referer-gated S3, MJPEG timelapse
+    usgs-volcanocams/   # 5 API systems, 400+ cameras, HANS notice search
+    noaa-cams/          # GOES satellite CDN + 90+ BuoyCAMs, no auth
+    weatherbug-cams/    # HMAC-SHA256 auth cracked, 13 endpoints, cameras + weather
+    earthcam/           # 298+ cameras, signed HLS streams, timelapse, bounding box
+    surfline/           # 500+ surf cams, wave/tide/wind forecasts, Origin header auth
+    faa-weathercams/    # 232 aviation cameras, Alaska-heavy, METAR/TAF
+    skiresort-webcams/  # 5,900+ ski webcams, snow reports, multi-country
+    skylinewebcams/     # Thousands worldwide, HLS streams, 50+ countries
+    webcamgalore/       # 8,000+ webcams, XML bounding box API, 365-day archive
+    foto-webcam/        # 398 Alpine webcams, up to 6000x4000, PHP JSON API
+    hdontap/            # 203 HD streams, Wowza SecureToken, up to 4K
+    explore-org/        # 100+ wildlife cameras, YouTube HLS, categories
+    nps-webcams/        # 290 NPS + 22 AQ cameras, archive since 2005
+    dot-511/            # 2,923+ DOT cameras (8 states), HLS streams, free API key
+    oregon-tripcheck/   # 1,120 cameras, 221 RWIS stations, road conditions
+    wsdot/              # 1,658 cameras, RSS/KML feeds, mountain passes
+    camscape/           # 1,325 webcams, WordPress REST, world map geo data
+    opentopia/          # 1,432+ public cameras, geographic search
   design/
     mydesigns/          # Full access, 178 endpoints, Ory auth, POD platform
   sports/
