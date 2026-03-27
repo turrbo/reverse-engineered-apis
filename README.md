@@ -107,11 +107,46 @@ Collection of unofficial API clients built by reverse-engineering websites' hidd
 | [HDOnTap](apis/cameras/hdontap/) | `apis/cameras/hdontap/` | Full access | 203 HD streams (wildlife/scenic/beach), Wowza SecureToken HLS up to 4K, timelapse (no auth) |
 | [explore.org](apis/cameras/explore-org/) | `apis/cameras/explore-org/` | Full access | 100+ wildlife/nature cameras (bears, birds, ocean), YouTube HLS streams, categories (no auth) |
 | [NPS Webcams](apis/cameras/nps-webcams/) | `apis/cameras/nps-webcams/` | Full access | 290 National Park cameras + 22 air quality webcams, archive since 2005, AQ timeseries (DEMO_KEY works) |
-| [DOT 511 (8 States)](apis/cameras/dot-511/) | `apis/cameras/dot-511/` | Auth required | 2,923+ DOT traffic cameras (NY/WI/PA/AK/UT/MN/VA/IA), HLS streams, unified Iteris platform (free API key) |
-| [Oregon TripCheck](apis/cameras/oregon-tripcheck/) | `apis/cameras/oregon-tripcheck/` | Full access | 1,120 cameras (321 video), 221 RWIS weather stations, road conditions, travel times (no auth) |
-| [WSDOT](apis/cameras/wsdot/) | `apis/cameras/wsdot/` | Full access | 1,658 cameras, RSS/KML feeds, mountain pass conditions, image URL pattern cracked (no auth for feeds) |
 | [Camscape](apis/cameras/camscape/) | `apis/cameras/camscape/` | Full access | 1,325 webcams, WordPress REST + SAYT search, world map geo data, stream types (no auth) |
 | [Opentopia](apis/cameras/opentopia/) | `apis/cameras/opentopia/` | Full access | 1,432+ public cameras, geographic search, random camera, categories (no auth) |
+
+## DOT Cameras
+
+| Site | Directory | Status | Description |
+|---|---|---|---|
+| [DOT 511 (8 States)](apis/dot-cameras/dot-511/) | `apis/dot-cameras/dot-511/` | Full access | NY/WI/PA/AK/UT/MN/VA/IA -- IBI Group + Castle Rock + Iteris platforms (2,923+ cameras) |
+| [Oregon TripCheck](apis/dot-cameras/oregon-tripcheck/) | `apis/dot-cameras/oregon-tripcheck/` | Full access | 1,120 cameras (321 video), 221 RWIS weather stations, road conditions (no auth) |
+| [WSDOT (WA)](apis/dot-cameras/wsdot/) | `apis/dot-cameras/wsdot/` | Full access | 1,658 cameras, RSS/KML feeds, mountain pass conditions (no auth) |
+| [Caltrans (CA)](apis/dot-cameras/caltrans/) | `apis/dot-cameras/caltrans/` | Full access | 3,430 cameras, 12 districts, HLS streams, chain controls, RWIS (no auth, open CORS) |
+| [TxDOT (TX)](apis/dot-cameras/txdot/) | `apis/dot-cameras/txdot/` | Full access | 3,410 cameras, MapLarge platform, SkyVDN HLS streams (Origin header required) |
+| [FL511 (FL)](apis/dot-cameras/fl511/) | `apis/dot-cameras/fl511/` | Full access | 4,700+ cameras, IBI Group platform, 15 event layers, NEXRAD radar tiles (session cookie) |
+| [OHGO (OH)](apis/dot-cameras/ohgo/) | `apis/dot-cameras/ohgo/` | Full access | 9 REST endpoints, OpenAPI spec, cameras + incidents + construction + RWIS (free API key) |
+| [IDOT (IL)](apis/dot-cameras/idot-il/) | `apis/dot-cameras/idot-il/` | Full access | 3,603 cameras, ArcGIS FeatureServer, 10 data layers (no auth) |
+| [GDOT (GA)](apis/dot-cameras/gdot-ga/) | `apis/dot-cameras/gdot-ga/` | Full access | 3,865 cameras, signed HLS JWT streams, IBI511 platform (session cookie) |
+| [NCDOT (NC)](apis/dot-cameras/ncdot/) | `apis/dot-cameras/ncdot/` | Full access | 779 cameras, 15 REST endpoints, road conditions for 100 counties (no auth) |
+| [MassDOT (MA)](apis/dot-cameras/massdot-ma/) | `apis/dot-cameras/massdot-ma/` | Full access | GraphQL API, CARS platform, 29 layer slugs, camera CDN (no auth) |
+| [NJDOT (NJ)](apis/dot-cameras/njdot-nj/) | `apis/dot-cameras/njdot-nj/` | Auth required | 130+ endpoints, AES encryption cracked, 4 camera types (Bearer token auth) |
+| [MDOT (MI)](apis/dot-cameras/mdot-mi/) | `apis/dot-cameras/mdot-mi/` | Full access | 785 cameras, 17 endpoints incl. snowplows + toll bridges (no auth) |
+| [ADOT (AZ)](apis/dot-cameras/adot-az/) | `apis/dot-cameras/adot-az/` | Full access | 604 cameras, 12 layer types, US-Mexico border crossing wait times (no auth) |
+| [NDOT (NV)](apis/dot-cameras/ndot-nv/) | `apis/dot-cameras/ndot-nv/` | Full access | 643 cameras, DataTables API, HLS on NDOT ITS servers (no auth) |
+| [SCDOT (SC)](apis/dot-cameras/scdot/) | `apis/dot-cameras/scdot/` | Full access | 752 cameras, Iteris ATIS, SkyVDN CDN, hurricane evacuation points (no auth) |
+| [TDOT (TN)](apis/dot-cameras/tdot-tn/) | `apis/dot-cameras/tdot-tn/` | Full access | 666 cameras, SkyVDN HLS, API key from public config.json (no auth) |
+| [CHART/MDOT (MD)](apis/dot-cameras/mdot-md/) | `apis/dot-cameras/mdot-md/` | Full access | 552 cameras, HLS streams, SignalR push, 11 data feeds (no auth) |
+| [MoDOT (MO)](apis/dot-cameras/modot-mo/) | `apis/dot-cameras/modot-mo/` | Full access | 880 HLS cameras, 7 CDN hosts, weather radar frames (no auth) |
+| [INDOT (IN)](apis/dot-cameras/indot-in/) | `apis/dot-cameras/indot-in/` | Full access | GraphQL API, 53 operations, CARS platform, snowplow tracking (no auth) |
+| [CTDOT (CT)](apis/dot-cameras/ctdot-ct/) | `apis/dot-cameras/ctdot-ct/` | Full access | 347 cameras, IBI511 platform, I-95/I-84/I-91 corridors (no auth) |
+| [LaDOTD (LA)](apis/dot-cameras/ladotd-la/) | `apis/dot-cameras/ladotd-la/` | Full access | 336 cameras, WOWZA HLS streams, IBI511 platform (no auth) |
+| [KYTC (KY)](apis/dot-cameras/kytc-ky/) | `apis/dot-cameras/kytc-ky/` | Full access | 363 cameras, Firebase Firestore + ArcGIS, 19 event types (no auth) |
+| [ALDOT (AL)](apis/dot-cameras/aldot-al/) | `apis/dot-cameras/aldot-al/` | Full access | 642 cameras, IdentityServer4 OIDC, 12+ endpoints (no auth for reads) |
+| [NHDOT (NH)](apis/dot-cameras/nhdot-nh/) | `apis/dot-cameras/nhdot-nh/` | Full access | New England 511 system, traffic cameras + events (no auth) |
+| [MaineDOT (ME)](apis/dot-cameras/mainedot-me/) | `apis/dot-cameras/mainedot-me/` | Full access | New England 511 system, traffic cameras + winter road conditions (no auth) |
+| [WVDOT (WV)](apis/dot-cameras/wvdot/) | `apis/dot-cameras/wvdot/` | Full access | 126 cameras, HLS streaming, 23 KML/GeoJSON endpoints (no auth) |
+| [NMDOT (NM)](apis/dot-cameras/nmdot-nm/) | `apis/dot-cameras/nmdot-nm/` | Full access | 183 cameras, JSONP endpoints, snowplow GPS tracking (no auth) |
+| [ITD (ID)](apis/dot-cameras/itd-id/) | `apis/dot-cameras/itd-id/` | Full access | Idaho 511 traffic cameras and road conditions (no auth) |
+| [NDOR (NE)](apis/dot-cameras/ndor-ne/) | `apis/dot-cameras/ndor-ne/` | Full access | 352 cameras, REST + GraphQL dual API, CARS platform (no auth) |
+| [KDOT (KS)](apis/dot-cameras/kdot-ks/) | `apis/dot-cameras/kdot-ks/` | Full access | 575 cameras, CARS platform, plow tracking, WZDx work zones (no auth) |
+| [CDOT (CO)](apis/dot-cameras/cdot-co/) | `apis/dot-cameras/cdot-co/` | Full access | Colorado mountain pass cameras, road conditions, chain laws (no auth) |
+| [SDDOT (SD)](apis/dot-cameras/sddot/) | `apis/dot-cameras/sddot/` | Full access | 192 camera views, Iteris ATIS, RWIS weather stations (no auth) |
 
 ## Sports
 
@@ -183,11 +218,42 @@ apis/
     hdontap/            # 203 HD streams, Wowza SecureToken, up to 4K
     explore-org/        # 100+ wildlife cameras, YouTube HLS, categories
     nps-webcams/        # 290 NPS + 22 AQ cameras, archive since 2005
-    dot-511/            # 2,923+ DOT cameras (8 states), HLS streams, free API key
-    oregon-tripcheck/   # 1,120 cameras, 221 RWIS stations, road conditions
-    wsdot/              # 1,658 cameras, RSS/KML feeds, mountain passes
     camscape/           # 1,325 webcams, WordPress REST, world map geo data
     opentopia/          # 1,432+ public cameras, geographic search
+  dot-cameras/
+    dot-511/            # 8 states (NY/WI/PA/AK/UT/MN/VA/IA), IBI Group + Castle Rock + Iteris
+    oregon-tripcheck/   # 1,120 OR cameras, 221 RWIS stations, road conditions
+    wsdot/              # 1,658 WA cameras, RSS/KML feeds, mountain passes
+    caltrans/           # 3,430 CA cameras, 12 districts, HLS streams, open CORS
+    txdot/              # 3,410 TX cameras, MapLarge platform, SkyVDN HLS
+    fl511/              # 4,700+ FL cameras, IBI Group, 15 event layers
+    ohgo/               # OH cameras, OpenAPI spec, 9 REST endpoints
+    idot-il/            # 3,603 IL cameras, ArcGIS FeatureServer
+    gdot-ga/            # 3,865 GA cameras, signed HLS JWT streams
+    ncdot/              # 779 NC cameras, 15 REST endpoints
+    massdot-ma/         # MA GraphQL API, CARS platform, 29 layer slugs
+    njdot-nj/           # NJ 130+ endpoints, AES encryption cracked
+    mdot-mi/            # 785 MI cameras, snowplows, toll bridges
+    adot-az/            # 604 AZ cameras, border crossing wait times
+    ndot-nv/            # 643 NV cameras, DataTables API, HLS
+    scdot/              # 752 SC cameras, Iteris ATIS, SkyVDN CDN
+    tdot-tn/            # 666 TN cameras, SkyVDN HLS, public config
+    mdot-md/            # 552 MD cameras, HLS, SignalR push
+    modot-mo/           # 880 MO HLS cameras, 7 CDN hosts
+    indot-in/           # IN GraphQL, 53 operations, CARS platform
+    ctdot-ct/           # 347 CT cameras, IBI511 platform
+    ladotd-la/          # 336 LA cameras, WOWZA HLS streams
+    kytc-ky/            # 363 KY cameras, Firebase + ArcGIS
+    aldot-al/           # 642 AL cameras, IdentityServer4 OIDC
+    nhdot-nh/           # NH New England 511 system
+    mainedot-me/        # ME New England 511 system
+    wvdot/              # 126 WV cameras, HLS, 23 KML/GeoJSON endpoints
+    nmdot-nm/           # 183 NM cameras, JSONP, snowplow GPS
+    itd-id/             # ID 511 traffic cameras
+    ndor-ne/            # 352 NE cameras, REST + GraphQL, CARS
+    kdot-ks/            # 575 KS cameras, CARS, plow tracking
+    cdot-co/            # CO mountain pass cameras, chain laws
+    sddot/              # 192 SD camera views, Iteris ATIS
   design/
     mydesigns/          # Full access, 178 endpoints, Ory auth, POD platform
   sports/
