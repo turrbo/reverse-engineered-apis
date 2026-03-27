@@ -1,408 +1,426 @@
-# Explore.org Wildlife Camera API — Reverse-Engineering Notes
+# Explore.org Live Camera API – Reverse Engineering Report
 
-**Reverse-engineered:** March 2026
-**Site:** https://explore.org/livecams
-**Client file:** `explore_org_client.py`
+**Site:** https://explore.org/livecams  
+**API Base:** `https://omega.explore.org/api`  
+**Documented:** 2026-03-27  
+**Cameras found:** 232 (127 live, 105 offline/seasonal)
 
 ---
 
 ## Overview
 
-Explore.org operates a live wildlife and nature camera network with 232 cameras across Africa, Alaska, the oceans, bird nests, animal sanctuaries, and more.  The site is a React/Redux SPA that consumes a set of JSON REST endpoints and a Cloudfront streaming CDN.  **All read endpoints are public and require no authentication.**
+Explore.org hosts 232 nature and wildlife live cameras organized into 15 content channels (Africa, Bears, Birds, Oceans, etc.). The site is a React SPA backed by a REST API at `https://omega.explore.org/api`. All video content is delivered via embedded YouTube live streams.
+
+The API was reverse-engineered by analyzing the compiled JS bundle (`/dist/app.js`) and observing network requests.
 
 ---
 
-## Discovered Endpoints
+## Camera Statistics (as of 2026-03-27)
 
-### 1. REST API — Camera Metadata
+| Channel | Total | Live | Offline |
+|---------|-------|------|---------|
+| Africa | 20 | 14 | 6 |
+| Bears | 20 | 1 | 19 |
+| Birds | 65 | 49 | 16 |
+| Bison | 2 | 2 | 0 |
+| Cat Rescues | 7 | 7 | 0 |
+| Curators | 18 | 0 | 18 |
+| Dog Bless You | 16 | 5 | 11 |
+| Farm Sanctuary | 7 | 4 | 3 |
+| Grasslands | 4 | 3 | 1 |
+| Nature Films | 4 | 2 | 2 |
+| Oceans | 43 | 22 | 21 |
+| Pollinators | 4 | 4 | 0 |
+| Sanctuaries | 3 | 3 | 0 |
+| Zen Cams | 18 | 11 | 7 |
+| **Total** | **232** | **127** | **105** |
 
-Both hostnames serve identical data.  `explore.org` is the public-facing mirror; `omega.explore.org` is the internal hostname referenced in the JS bundle.
+> Most "offline" cameras are seasonal (e.g. Katmai bears, panda breeding centers). They retain their YouTube IDs and can be watched as archived streams.
 
-#### List all cameras
+---
+
+## Architecture
+
 ```
-GET https://explore.org/api/livecams
-GET https://omega.explore.org/api/livecams
+explore.org (React SPA)
+    └── omega.explore.org/api  (REST JSON API)
+            ├── /initial         ← channel+camgroup index on page load
+            ├── /get_livecam_info.json?id=<id>  ← individual camera details
+            ├── /get_cam_group_info.json?id=<id> ← cam-group with all feeds
+            └── ...
 ```
-Returns 232 camera objects.  No query parameters are honoured (always returns full list).
 
-**Response:**
+All video streams are YouTube embeds: `https://www.youtube.com/embed/<VIDEO_ID>?autoplay=1`.
+
+---
+
+## API Endpoints
+
+### Public (No Auth Required)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/initial` | **Primary endpoint.** Returns channels, cam-groups, default camera, website config. Called on every page load. |
+| GET | `/channels` | Channel (category) list with cam-group IDs |
+| GET | `/get_livecam_info.json?id=<id>` | Full camera metadata: title, slug, description, YouTube ID, partner, location, viewer count, weather |
+| GET | `/get_cam_group_info.json?id=<id>&t=<ts>` | Cam-group with all feed metadata |
+| GET | `/get_cam_group_snapshots.json?id=<id>&t=<ts>` | Snapshot thumbnails for all feeds in a cam-group |
+| GET | `/get_page.json?page=<path>` | CMS page data for any URL path |
+| GET | `/landing-pages/active` | Landing page block data |
+| GET | `/get_homepage_alert` | Active alert banners |
+| GET | `/events` | Calendar events (1000+) |
+| GET | `/search_results.json?q=<query>` | Search cameras, blogs, videos, users |
+| GET | `/snapshots/all?page=<n>&first=<n>` | Paginated recent user snapshots |
+| GET | `/snapshots/livecam?livecam_id=<id>&page=<n>&first=<n>` | Camera snapshots |
+| GET | `/snapshots/channel?channel_id=<id>&page=<n>&first=<n>` | Channel snapshots |
+| GET | `/snapshots/gallery/<slug>` | Gallery snapshots |
+| GET | `/snapshots/galleries` | Gallery/contest listings |
+| GET | `/snapshots/contest-info/<id>` | Contest details |
+| GET | `/snapshots/gallery-info/<slug>` | Gallery details |
+| GET | `/snapshots/single?<params>` | Single snapshot lookup |
+| POST | `/get_metadata.json` body: `{"path": "/livecams/bald-eagles/..."}` | SEO metadata for a page |
+| GET | `/get_user_info.json?username=<u>` | Public user profile |
+| GET | `/get_grants` | Grant/funding information |
+| GET | `/get_faqs` | FAQ content |
+| GET | `/get_films` | Films listing |
+| GET | `/testimonials` | Testimonials |
+| GET | `/get_galleries` | Photo galleries |
+| GET | `/cameras/token` | Pusher token (live viewer count WebSocket) |
+| GET | `/get_tutorial_videos` | Tutorial videos |
+| GET | `/get_gallery_by_slug?gallery=<slug>` | Gallery by slug |
+| GET | `/ping` | Health check |
+| GET | `/redirects` | URL redirect map |
+
+### Authenticated (Bearer Token Required)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/login` | `{email, password}` → JWT token |
+| POST | `/auth/logout` | Invalidate token |
+| POST | `/auth/register` | Create account |
+| POST | `/auth/forgot_password` | Password reset email |
+| POST | `/auth/reset_password` | Complete reset |
+| GET | `/auth/get_authenticated_user_info` | Current user info |
+| POST | `/auth/newsletter_subscribe` | Newsletter opt-in |
+| POST | `/auth/associate` | Associate social login |
+| POST | `/accounts/edit_profile` | Update profile |
+| POST | `/accounts/save_avatar` | Upload avatar |
+| POST | `/accounts/upload_avatar` | Upload avatar image |
+| POST | `/accounts/save_user_preferences` | Save UI preferences |
+| POST | `/accounts/password` | Change password |
+| GET | `/get_user_favorites.json?id=<id>` | User's favorite cameras |
+| POST | `/add_favorite` | Add camera to favorites |
+| POST | `/remove_favorite` | Remove camera from favorites |
+| POST | `/live-cams/create_snapshot` | Create snapshot |
+| POST | `/broadcast/facebook` | Facebook broadcast |
+| GET | `/broadcast/templates?id=<id>` | Broadcast templates |
+| POST | `/broadcast/player-alert` | Player alert |
+
+### GraphQL (Comments System)
+
+Comments use a separate GraphQL API at `https://comments-api.dev.explore.org/graphql`.
+
+Key queries: `board`, `allComments`, `latestComments`, `boardsForLivecams`  
+Key mutations: `submitComment`, `addReaction`, `removeReaction`
+
+---
+
+## Data Models
+
+### Camera (`/get_livecam_info.json`)
+
+```json
+{
+  "id": 199,
+  "title": "Decorah Eagles",
+  "slug": "decorah-eagles",
+  "uuid": "8f88f967-f93a-45c5-a303-7aa5229e45ec",
+  "video_id": "IVmL3diwJuw",
+  "large_feed_html": "https://www.youtube.com/embed/IVmL3diwJuw?rel=0&showinfo=0&autoplay=1&playsinline=1",
+  "stream_id": "216",
+  "location_text": "Decorah, Iowa, USA",
+  "first_location": "Decorah Fish Hatchery",
+  "description": "<p>HTML description...</p>",
+  "tags": "eagle, birds, nest, decorah, bald eagles, iowa, raptor, live",
+  "channel": {"id": 4, "title": "Birds", "blog_channel": "Bird-Cams", "slug": ""},
+  "cam_group": {"id": 5, "title": "Bald Eagles", "slug": "bald-eagles", ...},
+  "camgroup_slug": "bald-eagles",
+  "partner": {"id": 24, "title": "Raptor Resource Project", "website": "...", ...},
+  "is_offline": false,
+  "force_offline": false,
+  "is_offseason": false,
+  "canonical_url": "https://explore.org/livecams/bald-eagles/decorah-eagles",
+  "latlong": ["43.275813", "-91.779292"],
+  "thumbnail_large_url": "https://files.explore.org/...",
+  "best_viewing_start_time": "00:00:00",
+  "best_viewing_end_time": "00:00:00",
+  "current_viewers": 544,
+  "primary_canonical_cam_group_slug": "bald-eagles",
+  "weather": { "current": { "tempF": 37, "windSpeed": 16, ... }, "forecast": [...] },
+  "facts": [],
+  "alerts": [...]
+}
+```
+
+### /initial Response Structure
+
 ```json
 {
   "status": "success",
-  "message": "Received livecams.",
   "data": {
-    "livecams": [ { ...camera... }, ... ]
+    "channels": [
+      {"id": 4, "title": "Birds", "cam_groups": [6, 144, 152, ...], "order": 0}
+    ],
+    "camgroups": [
+      {
+        "id": 5, "title": "Bald Eagles", "slug": "bald-eagles",
+        "feed_count": 11, "multi_livecam": false,
+        "feeds": [
+          {"id": 199, "title": "Decorah Eagles", "slug": "decorah-eagles", "uuid": "..."}
+        ]
+      }
+    ],
+    "default_livecam": { /* full camera object */ },
+    "channels": [...],
+    "website_backgrounds": [...],
+    "countries": [...],
+    "alerts": [...],
+    "snapshotsEnabled": true
   }
 }
 ```
 
-**Camera object fields:**
-
-| Field | Type | Notes |
-|-------|------|-------|
-| `id` | int | Numeric camera id |
-| `uuid` | string | UUID v4 |
-| `active` | bool | Whether listed on site |
-| `title` | string | Display name |
-| `slug` | string | URL slug |
-| `offline_label` | string | "Off Season", "Highlights", "Film", etc. |
-| `primary_channel_id` | int | Top-level channel id |
-| `primary_cam_group_id` | int | Camera group id |
-| `location_id` | int | Geographic location id |
-| `date_live` | ISO8601 | When the camera went live |
-| `meta_description` | string | SEO description |
-| `description` | string | HTML description |
-| `thumbnail_large_url` | string | Thumbnail image |
-| `stillframe` | object | Responsive image set (498/853/1280/1920 px wide) |
-| `is_featured` | bool | Featured on homepage |
-| `partner_id` | int | Partner organisation id |
-| `best_viewing_start_time` | "HH:MM:SS" | Prime viewing window start |
-| `best_viewing_end_time` | "HH:MM:SS" | Prime viewing window end |
-| `prime_all_day` | bool | Active all day |
-| `prime_all_night` | bool | Active all night |
-| `is_meditation` | bool | Is a meditation/ambient cam |
-| `snapshot_enabled` | bool | Snapshots can be taken |
-| `is_offline` | bool | Currently offline/off-season |
-| `recordings_template` | string | e.g. `EXP-STMSurface` — used to build HLS/snapshot URLs |
-| `wowza_fqdn` | string | Wowza server FQDN (informational; actual streams served from Cloudfront) |
-| `recording_priority` | int/null | Internal encoding priority |
-| `twitter_text` / `pinterest_text` / `facebook_text` | string | Pre-written social share text |
-| `legacy_id` | int/null | Old numeric id |
-
 ---
 
-#### List camera groups
+## URL Patterns
+
 ```
-GET https://explore.org/api/camgroups
-GET https://omega.explore.org/api/camgroups
-```
-Returns 108 camera groups (sub-categories / partnerships).
+# Camera page
+https://explore.org/livecams/<cam-group-slug>/<camera-slug>
+# Example:
+https://explore.org/livecams/bald-eagles/decorah-eagles
 
-**Group object fields:** `id, uuid, active, title, slug, image_url, poster_url, poster { image_set { width, height } }, multi_livecam, location_text`
+# Cam-group page  
+https://explore.org/livecams/<cam-group-slug>
+# Example:
+https://explore.org/livecams/brown-bears
 
-**Selected groups:**
+# YouTube embed
+https://www.youtube.com/embed/<VIDEO_ID>?rel=0&showinfo=0&autoplay=1&playsinline=1
 
-| id | slug | title |
-|----|------|-------|
-| 1 | national-audubon-society | National Audubon Society |
-| 2 | african-wildlife | African Wildlife |
-| 5 | decorah-eagles | Decorah Eagles (RRP) |
-| 6 | decorah-north-eagles | Decorah North Eagles |
-| 20 | brown-bears | Brown Bears (Katmai) |
-| 21 | brooks-falls-bears | Brooks Falls Bears |
-| 22 | brooks-falls-underwater | Brooks Falls Underwater |
-| 23 | kitten-rescue | Kitten Rescue |
-| 27 | warrior-canine-connection | Warrior Canine Connection |
-| 43 | monterey-bay-aquarium | Monterey Bay Aquarium |
-| 75 | polar-bears-international | Polar Bears International |
-| 95 | bears | All Bears (combined) |
-| 122 | blue-spring-manatees | Blue Spring State Park (Manatees) |
+# YouTube watch
+https://www.youtube.com/watch?v=<VIDEO_ID>
 
----
+# Still frame / snapshot
+https://media.explore.org/stillframes/<filename>
+https://files.explore.org/sn/<year>/<month>/<day>/<filename>.jpg
 
-#### List navigation channels
-```
-GET https://explore.org/api/channels
-GET https://omega.explore.org/api/channels
-```
-
-Returns 11 top-level navigation channels with their associated cam_group id lists.
-
-| id | title | cam_groups |
-|----|-------|-----------|
-| 16 | Featured | [79, 5, 12, 148, 140, 141, 122, 76, 6, 43, 27, 23, 50] |
-| 1 | Africa | [118, 140, 2, 100, 119] |
-| 5 | Bears | [95, 75, 20, 139, 21, 22] |
-| 4 | Birds | [6, 144, 152, 151, 15, 130, 148, 72, 5, ...] |
-| 10 | Oceans | [43, 44, 37, 129, 122, 41, 40, 35, 36, ...] |
-| 8 | Dog Bless You | [27, 143, 33, 30, 34, 109] |
-| 7 | Cat Rescues | [23, 137, 24] |
-| 18 | Sanctuaries | [96, 128, 93, 58] |
-| 13 | Zen Cams | [50, 153, 73, 76, 19, 49, ...] |
-| 20 | All Cams | [63] |
-| 21 | Multi-View | [141, 149, 147, 146, 145, 142] |
-
----
-
-#### Get feeds for a camera group
-```
-GET https://omega.explore.org/api/get_cam_group_snapshots.json?t={unix_ts}&id={group_id}
-```
-
-This is the richest endpoint — it returns live feed data including `stream_id`, current snapshot URL, `current_viewers`, and `is_offline` status.  Used by the web player to populate the sidebar.
-
-**Parameters:**
-- `id` — cam group id (required)
-- `t` — Unix timestamp for cache-busting (use 0 for latest)
-
-**Feed object fields** (in addition to camera fields):
-
-| Field | Type | Notes |
-|-------|------|-------|
-| `stream_id` | string | Numeric stream id (as string) — use with streams CDN |
-| `snapshot` | string | Latest snapshot URL from snapshots.explore.org |
-| `current_viewers` | int | Real-time viewer count |
-| `is_inactive` | bool | Seasonal inactivity |
-| `force_offline` | bool | Manually forced offline |
-| `blurred_snapshot_url` | string | Blurred background version |
-| `is_film` | bool | Film content (not live) |
-| `cam_group` | object | `{ id }` |
-| `order` | int | Display order in group |
-| `timestamp` | int | Snapshot Unix timestamp |
-
----
-
-#### Search
-```
-GET https://omega.explore.org/api/search_results.json?q={query}
-```
-
-Full-text search across cameras, groups, and content.
-
-**Response:**
-```json
-{
-  "status": "success",
-  "data": {
-    "feeds": [ { ...feed... }, ... ]
-  }
-}
+# Camera thumbnail variants
+https://media.explore.org/stillframes/<name>__media_1920x1080.jpg
+https://media.explore.org/stillframes/<name>__media_1280x720.jpg
+https://media.explore.org/stillframes/<name>__media_853x480.jpg
+https://media.explore.org/stillframes/<name>__media_498x280.jpg
 ```
 
 ---
 
-#### Events / schedule
-```
-GET https://omega.explore.org/api/events
-```
+## Python Client Usage
 
-Returns 1 000+ scheduled events (live shows, guided tours, special broadcasts).
-
-**Event fields:** `id, event_id, is_canceled, summary, description, start_time, end_time, created_at, updated_at, is_all_day`
-
----
-
-#### User snapshots (community photos)
-```
-GET https://omega.explore.org/api/snapshots/all
-    ?per_page={N}
-    &cursor={base64_cursor}
-    &livecam_id={id}
-    &cam_group_id={id}
-```
-
-Cursor-paginated list of user-submitted snapshot photos.
-
-**Snapshot fields:** `title, caption, thumbnail, snapshot, num_favorites, username, user_id, uuid, display_name, avatar_uri, timezone, timestamp, local_time, created_at, livecam_id, youtube_id, youtube_delta`
-
----
-
-### 2. Streaming CDN — HLS Streams
-
-```
-GET https://d11gsgd2hj8qxd.cloudfront.net/streams.json
-GET https://d11gsgd2hj8qxd.cloudfront.net/streams.json?q[id_in][]=216&q[id_in][]=215
-```
-
-Returns real-time stream status for all 145 streams (or a subset when id filters provided).
-
-**Stream object:**
-```json
-{
-  "id": 216,
-  "name": "Decorah Eagles - Fish Hatchery",
-  "playlistUrl": "https://outbound-production.explore.org/stream-production-216/.m3u8",
-  "snapshotHost": "snapshots-production.explore.org",
-  "placeholderUrl": "",
-  "currentTime": "2026-03-27T12:28:09-05:00",
-  "state": "live",
-  "numberOfViewers": 546
-}
-```
-
-**HLS playlist URL pattern (no auth required):**
-```
-https://outbound-production.explore.org/stream-production-{stream_id}/.m3u8
-```
-
-Stream states:
-- `live` — camera is actively streaming (126 of 145 at time of research)
-- `on_demand` — playing looped/recorded content (19 of 145)
-
----
-
-### 3. Snapshot Images
-
-#### Latest live snapshot
-```
-https://snapshots.explore.org/{template}-EDGE/{template}-EDGE-{unix_ts}.jpg
-https://snapshots.explore.org/{template}-EDGE/{template}-EDGE-{unix_ts}-scaled.jpg
-```
-
-Where `{template}` is the camera's `recordings_template` field (e.g. `EXP-FallsLow`).  The timestamp is the Unix epoch of the HLS segment.  The `-scaled` variant is a smaller resolution version.
-
-Example:
-```
-https://snapshots.explore.org/EXP-BrownBearsMeditation-EDGE/EXP-BrownBearsMeditation-EDGE-1774632406-scaled.jpg
-```
-
-The current snapshot URL is served directly in the feed data from `/api/get_cam_group_snapshots.json`.
-
-#### User-submitted snapshots
-```
-https://files.explore.org/sn/{year}/{month}/{day}/{filename}.jpg
-```
-
----
-
-### 4. WebSocket — Live Snapshot Feed
-
-```
-wss://snapdata.prod.explore.org/oldest/{template}-EDGE
-```
-
-Receives real-time snapshot events as new HLS segments are available.  Used by the web player to update the snapshot timeline.
-
----
-
-### 5. Media CDN
-
-All camera images are served from:
-
-```
-https://media.explore.org/stillframes/{filename}__media_{W}x{H}.jpg
-https://media.explore.org/posters/{filename}__media_{W}x{H}.jpg
-https://media.explore.org/blurred-snapshots/{slug}_blurred.jpg
-```
-
-Available stillframe widths: `498, 853, 1280, 1920` (px)
-Available poster widths: `200, 320, 480, 720` (px)
-
----
-
-### 6. Comments / GraphQL
-
-```
-POST https://comments.explore.org/graphql
-```
-
-Requires a `query` or `queryId` field in the JSON body.  Not reverse-engineered further; requires user JWT from `omega.explore.org/auth`.
-
----
-
-### 7. Authentication (optional)
-
-```
-POST https://omega.explore.org/api/api/v1/accounts/login/
-POST https://omega.explore.org/api/api/v1/getdata/   (Bearer token)
-```
-
-OAuth social login:
-```
-https://omega.explore.org/auth/google?...
-https://omega.explore.org/auth/apple?...
-https://omega.explore.org/auth/facebook?...
-https://omega.explore.org/auth/twitter?...
-```
-
-Authentication is only required for:
-- Submitting snapshots
-- Rating snapshots
-- Toggling snapshot favorites
-- Accessing user profile data
-- The `cameraToken` used to authorise the streams CDN (only for certain features; the public streams.json endpoint works without it)
-
----
-
-## Client Usage
-
-### Installation
-```bash
-pip install requests
-```
-
-### Quick start
 ```python
-from explore_org_client import ExploreOrgClient
+from explore_org_client import ExploreOrgClient, fetch_all_camera_details, CAMERA_CATALOGUE
 
+# Basic usage
 client = ExploreOrgClient()
 
-# Summary statistics
-print(client.camera_summary())
+# === Listing cameras ===
 
-# List all cameras
-cameras = client.list_cameras()
+# All 232 cameras (basic data from /initial)
+all_cams = client.get_all_cameras()
 
-# Active cameras only
-active = client.list_active_cameras()
+# Only live cameras
+live_cams = client.get_live_cameras()
 
-# Bear cameras
-bears = client.get_cameras_by_channel('Bears')
+# By category
+bird_cams = client.get_cameras_by_channel("Birds")
+bear_cams = client.get_cameras_by_channel("Bears")
+africa_cams = client.get_cameras_by_channel("Africa")
+ocean_cams = client.get_cameras_by_channel("Oceans")
 
-# Get stream URL for Decorah Eagles (stream_id=216)
-url = client.get_stream_url(216)
-# https://outbound-production.explore.org/stream-production-216/.m3u8
+# By cam-group (sub-category)
+eagle_cams = client.get_cameras_by_cam_group("bald-eagles")
+katmai_cams = client.get_cameras_by_cam_group("brown-bears")
 
-# Get all live streams with viewer counts
-live = client.list_live_streams()
+# By location
+iowa_cams = client.get_cameras_by_location("Iowa")
+africa_cams = client.get_cameras_by_location("South Africa")
 
-# Most watched
-top = client.most_watched(top_n=10)
+# By tag
+cat_cams = client.get_cameras_by_tag("kitten")
+
+# === Camera details ===
+
+# Quick lookup (basic info from /initial)
+cam = client.get_camera(199)
+print(cam.title, cam.youtube_id, cam.is_live)
+print(cam.youtube_watch_url)  # https://www.youtube.com/watch?v=IVmL3diwJuw
+
+# Full details (makes one API call)
+cam = client.get_camera_detail(199)
+print(cam.description_text)
+print(cam.latlong)
+print(cam.partner_title)
+print(cam.current_viewers)
+
+# By slug
+cam = client.get_camera_by_slug("decorah-eagles")
+
+# === Snapshots ===
+
+# Recent snapshots from all cameras
+snaps = client.get_recent_snapshots(page=1, per_page=20)
+
+# Snapshots for a specific camera
+snaps = client.get_camera_snapshots(199, per_page=10)
+for s in snaps:
+    print(s.caption, s.full_url, s.created_at)
+
+# === Search ===
+
+results = client.search("katmai bears")
+print(results["cameras"])   # list of matching cameras
+print(results["blog_posts"])
+
+# === Authentication ===
+
+client.login("email@example.com", "password")
+user = client.get_current_user()
+
+# === Export ===
+
+# Export to JSON (for pandas, etc.)
+data = client.export_camera_list(include_offline=True)
+import json
+json.dump(data, open("cameras.json", "w"), indent=2)
+
+# === Full detailed fetch (slow) ===
+# Makes one API request per camera (~232 requests, ~60 seconds)
+detailed_cams = fetch_all_camera_details(delay=0.1)
+
+# === Offline catalogue ===
+# Pre-fetched data embedded in the module - no API calls needed
+from explore_org_client import CAMERA_CATALOGUE
+for cam_id, info in CAMERA_CATALOGUE.items():
+    if info["live"] and info["channel"] == "Africa":
+        print(info["title"], info["youtube_id"])
+        print(f"  Watch: https://www.youtube.com/watch?v={info['youtube_id']}")
+```
+
+### CLI Usage
+
+```bash
+# System summary
+python3 explore_org_client.py summary
+
+# List all live cameras
+python3 explore_org_client.py live
+
+# All cameras (live + offline)
+python3 explore_org_client.py all
+
+# List channels
+python3 explore_org_client.py channels
+
+# Cameras in a channel
+python3 explore_org_client.py channel Bears
+python3 explore_org_client.py channel Africa
+python3 explore_org_client.py channel Birds
+python3 explore_org_client.py channel Oceans
+
+# Cameras in a cam-group
+python3 explore_org_client.py group bald-eagles
+python3 explore_org_client.py group brown-bears
+
+# Camera details
+python3 explore_org_client.py camera 199
+python3 explore_org_client.py camera decorah-eagles
 
 # Search
-results = client.search('polar bear')
+python3 explore_org_client.py search "katmai bears"
+python3 explore_org_client.py search penguin
 
-# Get feeds for a camera group (includes stream_id, snapshot URL, viewer count)
-feeds = client.get_camgroup_feeds(group_id=20)  # Brown Bears
+# Popular cameras by viewer count
+python3 explore_org_client.py popular
 
-# User snapshots (paginated)
-page = client.list_snapshots(per_page=20)
-for snap in page['data']:
-    print(snap['title'], snap['snapshot'])
+# Recent snapshots for a camera
+python3 explore_org_client.py snapshots 199 --n 5
 
-# Events / schedule
-events = client.list_upcoming_events()
-
-# Build snapshot URL from recordings_template
-snap_url = client.build_snapshot_url('EXP-FallsLow', unix_timestamp=1774632406)
-```
-
-### Play a stream with ffplay
-```bash
-ffplay "https://outbound-production.explore.org/stream-production-216/.m3u8"
-```
-
-### Play a stream with VLC
-```bash
-vlc "https://outbound-production.explore.org/stream-production-216/.m3u8"
+# Export all cameras to JSON
+python3 explore_org_client.py export -o cameras.json
+python3 explore_org_client.py export --offline -o cameras_all.json
 ```
 
 ---
 
-## Data Relationships
+## Key Cameras
 
-```
-Channel (11)
-  └── cam_groups[] (108 total)
-        └── feeds / cameras (232 total)
-              ├── recordings_template  →  HLS m3u8 URL
-              ├── stream_id            →  streams.json CDN
-              └── snapshot             →  snapshots.explore.org
-```
+### Bears (Katmai - seasonal, live July-October)
+| ID | Camera | YouTube ID | URL |
+|----|--------|-----------|-----|
+| 25 | Brooks Falls Brown Bears | `4qSRIIaOnLI` | https://explore.org/livecams/brown-bears/brown-bear-salmon-cam-brooks-falls |
+| 229 | Brooks Falls Brown Bears Low | `53vUbxn5wl8` | https://explore.org/livecams/brown-bears/brooks-falls-brown-bears-low |
+| 26 | Kat's River View | `0ikLzeuGeOA` | https://explore.org/livecams/brown-bears/brown-bear-salmon-cam-lower-river |
+| 27 | The Riffles Bear Cam | `tp7PEBb2GCs` | https://explore.org/livecams/brown-bears/the-riffles-bear-cam |
+| 50 | River Watch Bear Cam | `98SZ_UMAp_Q` | https://explore.org/livecams/brown-bears/river-watch-brown-bear-salmon-cams |
+| 122 | Underwater Salmon Cam | `n712VZuZlrM` | https://explore.org/livecams/brown-bears/underwater-bear-cam-brown-bear-salmon-cams |
+
+### Eagles
+| ID | Camera | YouTube ID |
+|----|--------|-----------|
+| 199 | Decorah Eagles | `IVmL3diwJuw` |
+| 108 | Decorah North Eagles | `GGIE1E-kaMQ` |
+| 309 | Fraser Point Bald Eagle Nest 2 | `OY4V_AppZ6s` |
+| 358 | Trempealeau Eagles | `8bMrSm0Ap20` |
+| 134 | West End Bald Eagle Cam | `RmmAzrAkKqI` |
+| 119 | Great Spirit Bluff Falcons | `w-Vjv7Cr9Ss` |
+
+### African Wildlife
+| ID | Camera | YouTube ID |
+|----|--------|-----------|
+| 284 | Tau Waterhole | `DsNtwGJXTTs` |
+| 249 | Tembe Elephant Park | `VUJbDTIYlM4` |
+| 248 | The Naledi Cat-EYE | `pZZst4BOpVI` |
+| 250 | Olifants River | `_NXaovxB-Bk` |
+| 276 | Nkorho Bush Lodge | `dIChLG4_WNs` |
+| 247 | Rosie's Pan | `ItdXaWUVF48` |
+| 364 | Boteti River Zebra Migration | `7hKbyXxWT2k` |
+| 317 | Stony Point Penguin Colony | `ZRvngZiRx_g` |
+
+### Underwater / Oceans
+| ID | Camera | YouTube ID |
+|----|--------|-----------|
+| 2 | Tropical Fish - Coral Predators | `h0F818upkgI` |
+| 3 | Blue Cavern Aquarium | `H59B9Uoewwg` |
+| 8 | Tropical Reef Aquarium | `DHUnz4dyb54` |
+| 7 | West Coast Sea Nettles - Jellyfish | `IYG9fnz40-E` |
+| 59 | Shark Lagoon | `YT7lH6U68S4` |
+| 96 | OrcaLab Main Cams | `hTOmWcmr2Tc` |
+| 272 | Manatee Cam - Blue Spring (above) | `FbbHB9ka8Yg` |
+| 273 | Manatee Cam - Blue Spring (underwater) | `h2GA3zrYeA0` |
 
 ---
 
-## Known API Limitations
+## Notes
 
-1. **No single-camera detail endpoint** — `/api/livecams/{id}` returns empty HTML (200 OK, empty body).  Use list_cameras() and filter client-side.
-2. **No direct camgroup detail endpoint** — `/api/camgroups/{id}` returns 404.  Use list_camgroups() and filter.
-3. **streams.json filter bug** — `?q[id_in][]=53` does not return stream id 53; it appears to do a modular/hash lookup and may return other streams.  Use list_streams() and filter client-side.
-4. **Wowza FQDN** — The `wowza_fqdn` field (e.g. `wowza1-us-central-1-prod.explore.org`) is no longer publicly resolvable.  All HLS delivery has migrated to the `outbound-production.explore.org` CDN.
-5. **Snapshot timestamps** — The timestamp embedded in snapshot URLs changes every ~10 seconds (one HLS segment).  Use the `snapshot` URL from get_camgroup_feeds() for the most recent image rather than guessing timestamps.
-6. **Search is omega-only** — `search_results.json` is only on omega.explore.org, not on explore.org/api.
+- **Seasonal cameras:** Many cameras (especially Katmai bears, panda cams) are only active during specific seasons. They remain on the site with YouTube IDs but streams show archived footage or a placeholder when inactive.
+- **YouTube stream type:** Some cameras use YouTube live streams (24/7 continuous), others use YouTube premieres or on-demand videos. The `video_id` field works for both.
+- **Viewer counts:** Real-time viewer counts (`current_viewers`) require calling `/get_livecam_info.json` individually for each camera; they are not included in the `/initial` bulk response.
+- **Weather data:** Each camera with `weather_enabled: true` includes 10-day forecast data in the `/get_livecam_info.json` response.
+- **Rate limiting:** The API appears to have no strict rate limiting during testing, but polite delays (0.1s per request) are recommended for bulk fetching.
+- **Authentication:** A JWT token is required for write operations (favorites, comments, snapshots). The token is obtained via `POST /auth/login`.
 
 ---
 
-## Rate Limiting
+## Files
 
-No rate limiting was observed during research.  The API does not require an API key for read operations.  Be respectful: the streams CDN serves live video to thousands of concurrent viewers; do not hit it in tight loops.
+- `explore_org_client.py` — Python API client with embedded camera catalogue
+- `explore_org_README.md` — This documentation
