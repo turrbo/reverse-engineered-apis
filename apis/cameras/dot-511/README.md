@@ -1,100 +1,20 @@
-# DOT 511 Unified Camera Client
+# DOT 511 Unified Traffic Camera Client
 
-A unified Python client for accessing highway traffic camera systems across multiple US states. All states use the same underlying **Iteris/RITIS platform** with an identical REST API structure.
-
----
+Reverse-engineered Python client for 8 US state DOT 511 traffic camera systems.
+**No API key required.**
 
 ## Supported States
 
-| Code | State        | API Version | Developer Page |
-|------|-------------|-------------|----------------|
-| `ny` | New York    | v1 (legacy) | https://511ny.org/developers/help |
-| `wi` | Wisconsin   | v2          | https://www.511wi.gov/developers/doc |
-| `pa` | Pennsylvania| v2          | https://www.511pa.com/developers/doc |
-| `ak` | Alaska      | v2          | https://511.alaska.gov/developers/doc |
-| `ut` | Utah        | v2          | https://udottraffic.utah.gov/developers/doc |
-| `mn` | Minnesota   | v2          | https://www.511mn.org/developers/doc |
-| `va` | Virginia    | v2          | https://www.511va.org/developers/doc |
-| `ia` | Iowa        | v2          | https://511ia.org/developers/doc |
-
----
-
-## API Overview
-
-### Authentication
-
-Every state requires a free Developer API key obtained by registering an account at the state's `/my511/register` URL. The key is passed as a query parameter:
-
-```
-GET https://{state-host}/api/v2/get/cameras?key={YOUR_KEY}&format=json
-```
-
-**Rate limit:** 10 calls per 60 seconds per state.
-
-### API Versions
-
-**v1 (New York only - legacy)**
-```
-GET https://511ny.org/api/getcameras?key={KEY}&format=json
-```
-Response fields:
-- `ID` - unique camera identifier
-- `Name` - camera location description
-- `RoadwayName` - road/highway name
-- `DirectionOfTravel` - direction string
-- `Latitude` / `Longitude`
-- `Url` - link to 511 website detail page
-- `VideoUrl` - direct HLS `.m3u8` stream URL or MJPEG URL (or `null`)
-- `Disabled` / `Blocked` - boolean flags
-
-**v2 (all other states)**
-```
-GET https://{state-host}/api/v2/get/cameras?key={KEY}&format=json
-```
-Response fields:
-- `Id` - integer unique identifier
-- `Source` / `SourceId` - data source info
-- `Roadway` - road name
-- `Direction` - direction string
-- `Latitude` / `Longitude`
-- `Location` - text location description
-- `SortOrder` - display ordering hint
-- `Views` - array of stream view objects:
-  - `Url` - HLS `.m3u8` stream URL
-  - `Status` - stream availability status
-  - `Description` - view label
-
-### Stream URL Patterns
-
-**New York** (Skyline/NYSDOT CDN):
-```
-https://s{N}.nysdot.skyvdn.com:443/rtplive/{CAM_ID}/playlist.m3u8
-```
-Where `N` is a server number (51, 52, 53, 58, 7, 9) and `CAM_ID` looks like `R5_007`.
-
-**Wisconsin** (WisDOT CCTV):
-```
-https://cctv1.dot.wi.gov:443/rtplive/{CAM_ID}/playlist.m3u8
-```
-
-**Other states**: Stream URLs are provided directly in the `Views[].Url` field from the API.
-
-A small number of cameras expose MJPEG still-image streams:
-```
-http://live:{password}@{IP}:22250/mjpg/video.mjpg
-```
-
----
-
-## Installation
-
-No external dependencies required — the client uses Python's built-in `urllib`. For better performance, install `requests`:
-
-```bash
-pip install requests
-```
-
-The file `dot_511_client.py` is self-contained with no other local dependencies.
+| Code | State         | Platform            | Base URL                              |
+|------|--------------|---------------------|---------------------------------------|
+| `wi` | Wisconsin    | IBI Group ASP.NET   | https://511wi.gov                     |
+| `ny` | New York     | IBI Group ASP.NET   | https://511ny.org                     |
+| `pa` | Pennsylvania | IBI Group ASP.NET   | https://www.511pa.com                 |
+| `ak` | Alaska       | IBI Group ASP.NET   | https://511.alaska.gov                |
+| `ut` | Utah         | IBI Group ASP.NET   | https://udottraffic.utah.gov          |
+| `mn` | Minnesota    | Castle Rock CARS    | https://mntg.carsprogram.org          |
+| `ia` | Iowa         | Castle Rock CARS    | https://iatg.carsprogram.org          |
+| `va` | Virginia     | Iteris TTRIP        | https://511.vdot.virginia.gov         |
 
 ---
 
@@ -103,180 +23,421 @@ The file `dot_511_client.py` is self-contained with no other local dependencies.
 ```python
 from dot_511_client import DOT511Client
 
-client = DOT511Client(api_keys={
-    "ny": "YOUR_NY_KEY",
-    "wi": "YOUR_WI_KEY",
-    # add more states as needed
-})
+client = DOT511Client()
 
-# --- List all cameras in New York ---
-cameras = client.get_cameras("ny")
-print(f"NY has {len(cameras)} cameras")
+# Get all Wisconsin cameras
+cameras = client.get_cameras("wi")
+print(len(cameras), "cameras")
 
-# --- Get only active cameras with streams ---
-active = client.get_cameras("ny", active_only=True, with_stream_only=True)
-for cam in active[:5]:
-    print(cam.name, "->", cam.video_url)
+# Get cameras with live HLS streams
+live = client.get_cameras("mn", with_stream_only=True)
+for cam in live[:5]:
+    print(cam.primary_stream_url)
 
-# --- Get a specific camera ---
-cam = client.get_camera_by_id("ny", "Skyline-10012")
-print(cam)
-# Camera(NY:'Skyline-10012' | 'NY 33 at Northampton Street' | active | stream)
-print(cam.video_url)
-# https://s51.nysdot.skyvdn.com:443/rtplive/R5_007/playlist.m3u8
+# Get traffic incidents
+incidents = client.get_events("wi", layer="Incidents")
+for evt in incidents[:5]:
+    print(evt.roadway, "-", evt.description[:60])
 
-# --- Get just the stream URL ---
-url = client.get_camera_stream_url("ny", "Skyline-10012")
-print(url)
-# https://s51.nysdot.skyvdn.com:443/rtplive/R5_007/playlist.m3u8
+# Get Minnesota road weather stations
+stations = client.get_rwis_stations("mn")
+```
+
+---
+
+## Platform Details
+
+### Platform 1: IBI Group ASP.NET MVC
+
+States: WI, NY, PA, AK, UT
+
+All IBI states use a cookie-based ASP.NET MVC application. No authentication is needed for
+camera listings or event data. The endpoints are:
+
+#### Camera Listing
+
+```
+GET {base_url}/Camera/GetUserCameras
+```
+
+Response format:
+```json
+{
+  "data": [
+    {
+      "id": 52,
+      "sourceId": "CCTV-40-0042",
+      "source": "ATMS",
+      "roadway": "I-41/US 45",
+      "direction": 0,
+      "location": "I-41/US 45 at Capitol Dr",
+      "latLng": {
+        "geography": {
+          "wellKnownText": "POINT (-88.05841 43.088111)"
+        }
+      },
+      "images": [
+        {
+          "id": 988,
+          "cameraSiteId": 52,
+          "imageUrl": "/map/Cctv/988",
+          "videoUrl": "https://cctv1.dot.wi.gov:443/rtplive/CCTV-40-0042/playlist.m3u8",
+          "videoType": "application/x-mpegURL"
+        }
+      ]
+    }
+  ],
+  "myCameras": false
+}
+```
+
+Key fields:
+- `id` — camera site ID (use for referencing the camera)
+- `sourceId` — source system ID, embedded in HLS URL patterns
+- `latLng.geography.wellKnownText` — `POINT (longitude latitude)` format
+- `images[].videoUrl` — direct HLS `.m3u8` stream URL
+- `images[].imageUrl` — relative path to static JPEG preview (append to base_url)
+
+#### Static Preview Images
+
+```
+GET {base_url}/map/Cctv/{imageId}
+```
+
+Returns a JPEG snapshot. The `imageId` is the `images[].id` value (not the camera site ID).
+
+#### Traffic Events
+
+```
+POST {base_url}/list/GetData/{layerName}
+Content-Type: application/x-www-form-urlencoded
+
+draw=1&start=0&length=200
+```
+
+Available layer names:
+- `Incidents`
+- `Construction`
+- `Closures`
+- `SpecialEvents`
+- `IncidentClosures`
+- `ConstructionClosures`
+- `WeatherClosures`
+
+Response is DataTables JSON format:
+```json
+{
+  "draw": 1,
+  "recordsTotal": 47,
+  "recordsFiltered": 47,
+  "data": [
+    {
+      "id": "12345",
+      "type": "Incident",
+      "roadwayName": "I-94",
+      "description": "Stalled vehicle on shoulder",
+      "direction": "Eastbound",
+      "county": "Milwaukee",
+      "startDate": "2026-03-27T10:30:00",
+      "cameras": [{"id": 52}]
+    }
+  ]
+}
+```
+
+#### HLS Stream URL Patterns
+
+| State | Pattern |
+|-------|---------|
+| WI | `https://cctv1.dot.wi.gov:443/rtplive/{sourceId}/playlist.m3u8` |
+| NY | `https://s52.nysdot.skyvdn.com:443/rtplive/{sourceId}/playlist.m3u8` (servers s51-s58) |
+| PA | `https://pa-se2.arcadis-ivds.com:8200/chan-{id}/index.m3u8` (auth required) |
+| AK | Static images only (RWIS type cameras) |
+| UT | Provided in `images[].videoUrl` |
+
+---
+
+### Platform 2: Castle Rock ITS CARS
+
+States: MN, IA
+
+CARS is a RESTful microservices architecture hosted at `{state}tg.carsprogram.org`.
+Full OpenAPI/Swagger documentation is available at each service's `/openapi` path.
+
+#### Camera Listing
+
+```
+GET https://{state}tg.carsprogram.org/cameras_v1/api/cameras
+```
+
+Response format:
+```json
+[
+  {
+    "id": 464799,
+    "public": true,
+    "name": "T.H.5 EB @ Great Plains Blvd",
+    "lastUpdated": 1774630598214,
+    "location": {
+      "fips": 27,
+      "latitude": 44.858,
+      "longitude": -93.531,
+      "routeId": "MN 5",
+      "cityReference": "in Chanhassen"
+    },
+    "cameraOwner": {
+      "name": "Iris"
+    },
+    "views": [
+      {
+        "name": "T.H.5 EB @ Great Plains Blvd",
+        "type": "WMP",
+        "url": "https://video.dot.state.mn.us/public/C5013.stream/playlist.m3u8",
+        "videoPreviewUrl": "https://public.carsprogram.org/cameras/MN/C5013"
+      }
+    ]
+  }
+]
+```
+
+Key fields:
+- `id` — integer camera ID
+- `location.latitude`, `location.longitude` — decimal degrees
+- `location.routeId` — highway route identifier
+- `views[].url` — HLS `.m3u8` stream URL
+- `views[].videoPreviewUrl` — static JPEG preview at `public.carsprogram.org`
+
+#### Static Preview Images
+
+```
+https://public.carsprogram.org/cameras/{STATE_CODE}/{cameraId}
+```
+
+Example: `https://public.carsprogram.org/cameras/MN/C5013`
+
+#### Traffic Events
+
+```
+GET https://{state}tg.carsprogram.org/events_v1/api/eventMapFeaturesAndReports
+```
+
+Optional query parameters:
+- `bbox=minLon,minLat,maxLon,maxLat` — bounding box filter
+
+Returns GeoJSON FeatureCollection.
+
+#### Road Weather Information System (RWIS)
+
+```
+GET https://{state}tg.carsprogram.org/rwis_v1/api/stations
+GET https://{state}tg.carsprogram.org/rwis_v1/api/stationReports
+```
+
+Station data includes sensor location, route, and current conditions.
+
+#### OpenAPI Documentation
+
+Full machine-readable API specs are available at:
+```
+https://mntg.carsprogram.org/cameras_v1/openapi
+https://mntg.carsprogram.org/events_v1/openapi
+https://mntg.carsprogram.org/rwis_v1/openapi
+https://iatg.carsprogram.org/cameras_v1/openapi
+```
+
+---
+
+### Platform 3: Iteris TTRIP (Virginia)
+
+Virginia uses the Iteris TTRIP platform, an Angular SPA at `https://511.vdot.virginia.gov`.
+
+**Camera data requires authentication.** The Angular frontend calls:
+```
+POST https://511.vdot.virginia.gov/services/getCamerasArray
+```
+
+This Node.js proxy then forwards to:
+```
+https://data.511-atis-ttrip-prod.iteriscloud.com/
+```
+
+The proxy enforces session authentication. Direct API calls without a browser session
+receive a 401/403 response.
+
+#### Workaround (Best-Effort)
+
+To use the client with Virginia, obtain session cookies from an active browser session:
+
+1. Open `https://511.vdot.virginia.gov` in your browser
+2. Open DevTools -> Application -> Cookies
+3. Copy the session cookie values
+4. Pass them to the client:
+
+```python
+client = DOT511Client(
+    session_cookies={
+        "ASP.NET_SessionId": "your-session-id",
+        ".ASPXAUTH": "your-auth-token",
+    }
+)
+cameras = client.get_cameras("va")
+```
+
+#### Config Endpoint (No Auth Required)
+
+```
+GET https://511.vdot.virginia.gov/assets/config/config.json
+```
+
+Returns:
+```json
+{
+  "NODE_ENDPOINT": "https://511.vdot.virginia.gov/services/",
+  "TTRIP_ENDPOINT": "https://data.511-atis-ttrip-prod.iteriscloud.com/"
+}
 ```
 
 ---
 
 ## API Reference
 
-### `DOT511Client(api_keys=None, rate_limit=True, timeout=30)`
-
-Creates a new client instance.
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `api_keys` | `dict` | Optional dict of state code -> API key |
-| `rate_limit` | `bool` | Enforce 10 req/60s limit (default `True`) |
-| `timeout` | `int` | HTTP timeout in seconds (default 30) |
-
----
-
-### `get_cameras(state, api_key=None, *, roadway=None, direction=None, active_only=False, with_stream_only=False)`
-
-Retrieve cameras for a state with optional filtering.
+### `DOT511Client`
 
 ```python
-# All cameras in Wisconsin
-cameras = client.get_cameras("wi")
-
-# Active I-94 cameras going northbound
-cameras = client.get_cameras("wi", roadway="I-94", direction="North", active_only=True)
-
-# All cameras with HLS streams in Alaska
-cameras = client.get_cameras("ak", with_stream_only=True)
+client = DOT511Client(
+    timeout=30,              # HTTP timeout in seconds
+    session_cookies=None,    # Optional dict of cookies (needed for VA)
+)
 ```
 
-Returns a list of `Camera` objects.
+### `get_cameras(state, *, roadway=None, direction=None, with_stream_only=False, limit=None)`
 
----
-
-### `get_camera_by_id(state, camera_id, api_key=None)`
-
-Find a single camera by its ID.
+Retrieve cameras for a state.
 
 ```python
-cam = client.get_camera_by_id("ny", "Skyline-10012")
-if cam:
-    print(cam.stream_urls)
+# All cameras
+cams = client.get_cameras("wi")
+
+# Cameras with live streams only
+live = client.get_cameras("mn", with_stream_only=True)
+
+# Filter by road
+i94 = client.get_cameras("wi", roadway="I-94")
+
+# Limit results
+first10 = client.get_cameras("ny", limit=10)
 ```
 
----
+### `get_camera_by_id(state, camera_id)`
 
-### `get_camera_stream_url(state, camera_id, api_key=None, view_index=0)`
-
-Get the primary HLS stream URL for a camera.
+Find a single camera by ID.
 
 ```python
-url = client.get_camera_stream_url("ny", "Skyline-10012")
-# Use with VLC, ffmpeg, mpegts.js, hls.js, etc.
+cam = client.get_camera_by_id("wi", "52")
+print(cam.primary_stream_url)
 ```
 
----
-
-### `get_camera_image_url(state, camera_id, api_key=None)`
-
-Get a still image URL if the camera exposes MJPEG (not all cameras do).
-
-```python
-img = client.get_camera_image_url("ny", "some-mjpeg-camera")
-# May return None if only HLS is available
-```
-
----
-
-### `get_all_stream_urls(state, api_key=None, active_only=True)`
+### `get_all_stream_urls(state, with_preview=False)`
 
 Get all stream URLs as a flat list of dicts.
 
 ```python
-streams = client.get_all_stream_urls("ny")
-# [{"camera_id": ..., "name": ..., "roadway": ..., "stream_url": ...}, ...]
-
-for s in streams[:10]:
-    print(f'{s["name"]:50s} {s["stream_url"]}')
+for s in client.get_all_stream_urls("mn"):
+    print(s["name"], "->", s["stream_url"])
 ```
 
----
+### `get_cameras_near(state, lat, lon, radius_miles=5.0)`
 
-### `get_cameras_near(state, lat, lon, radius_miles=5.0, api_key=None)`
-
-Find cameras near a geographic coordinate.
+Find cameras within a radius, sorted by distance.
 
 ```python
-# Cameras within 3 miles of downtown Milwaukee
-cameras = client.get_cameras_near("wi", lat=43.0389, lon=-87.9065, radius_miles=3.0)
+nearby = client.get_cameras_near("wi", 43.0, -88.0, radius_miles=3.0)
+for dist_miles, cam in nearby:
+    print(f"{dist_miles:.1f}mi - {cam.name}")
 ```
 
----
+### `get_events(state, layer=None, page_size=200, bbox=None)`
+
+Retrieve traffic events.
+
+```python
+# All incidents in WI
+incidents = client.get_events("wi", layer="Incidents")
+
+# All event types in WI
+all_events = client.get_events("wi")
+
+# MN events in bounding box (min_lon, min_lat, max_lon, max_lat)
+events = client.get_events("mn", bbox=(-94.0, 44.5, -93.0, 45.5))
+```
+
+### `get_rwis_stations(state)`
+
+Get road weather stations (MN, IA only).
+
+```python
+stations = client.get_rwis_stations("mn")
+for s in stations:
+    print(s.name, s.latitude, s.longitude)
+```
+
+### `get_rwis_reports(state, station_id=None)`
+
+Get road weather sensor readings (MN, IA only).
+
+```python
+reports = client.get_rwis_reports("mn")
+# or for a single station:
+reports = client.get_rwis_reports("mn", station_id="123")
+```
 
 ### `list_states()`
 
 Return metadata for all supported states.
 
 ```python
-for state in client.list_states():
-    print(state["code"], state["name"], state["developer_page"])
+for s in client.list_states():
+    print(s["code"], s["name"], s["platform"])
 ```
 
----
+### `get_event_layers(state)`
 
-### Static helpers
+Return available event layer names for IBI states.
 
 ```python
-# Construct stream URLs manually
-wi_url = DOT511Client.construct_wi_hls_url("CAM001")
-# https://cctv1.dot.wi.gov:443/rtplive/CAM001/playlist.m3u8
+layers = client.get_event_layers("wi")
+# -> ['Incidents', 'Construction', 'Closures', 'SpecialEvents', ...]
+```
 
-ny_url = DOT511Client.construct_ny_hls_url("R5_007", server_num=51)
-# https://s51.nysdot.skyvdn.com:443/rtplive/R5_007/playlist.m3u8
+### `DOT511Client.build_preview_url(state, camera_id)`
 
-DOT511Client.is_hls_url("https://example.com/stream/playlist.m3u8")  # True
-DOT511Client.is_mjpeg_url("http://cam/mjpg/video.mjpg")              # True
+Build a static preview image URL (CARS states only).
+
+```python
+url = DOT511Client.build_preview_url("mn", "C5013")
+# -> "https://public.carsprogram.org/cameras/MN/C5013"
 ```
 
 ---
 
-### `Camera` Object
+## Camera Object Fields
 
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `state` | `str` | State code ('ny', 'wi', etc.) |
-| `camera_id` | `str` | Unique camera ID |
-| `name` | `str` | Camera location description |
-| `roadway` | `str` | Road/highway name |
-| `direction` | `str` | Direction of travel |
-| `latitude` | `float` | Decimal latitude |
-| `longitude` | `float` | Decimal longitude |
-| `detail_url` | `str` | Link to 511 detail page (v1 only) |
-| `video_url` | `str` | Primary stream URL |
-| `views` | `list[CameraView]` | All available stream views |
-| `disabled` | `bool` | Camera is disabled (v1 only) |
-| `blocked` | `bool` | Camera is blocked (v1 only) |
-| `source` | `str` | Data source name (v2) |
-| `source_id` | `str` | Source-specific ID (v2) |
-| `raw` | `dict` | Original API JSON payload |
-
-| Property | Description |
-|----------|-------------|
-| `is_active` | `True` if not disabled and not blocked |
-| `has_stream` | `True` if at least one HLS/MJPEG URL exists |
-| `stream_urls` | All stream URLs as a list |
+| Field                | IBI States         | CARS States        | Description                        |
+|----------------------|--------------------|--------------------|------------------------------------|
+| `camera_id`          | camera site ID     | CARS integer ID    | Unique ID within state             |
+| `name`               | location text      | camera name        | Human-readable name                |
+| `roadway`            | highway name       | route ID           | Road identifier                    |
+| `direction`          | compass bearing    | None               | Direction (IBI: 0-360 degrees)     |
+| `location`           | location text      | camera name        | Location description               |
+| `latitude`           | from WKT POINT     | direct float       | Decimal degrees                    |
+| `longitude`          | from WKT POINT     | direct float       | Decimal degrees                    |
+| `source_id`          | sourceId           | extracted from URL | ID used in stream URL patterns     |
+| `images`             | CameraImage list   | empty              | IBI image records                  |
+| `views`              | empty              | CameraView list    | CARS view records                  |
+| `primary_stream_url` | first HLS URL      | first HLS URL      | Convenience property               |
+| `stream_urls`        | all HLS URLs       | all HLS URLs       | All stream URLs                    |
+| `preview_image_url`  | full image URL     | CDN preview URL    | Static JPEG preview                |
+| `has_stream`         | bool               | bool               | True if any HLS URL available      |
 
 ---
 
@@ -286,97 +447,81 @@ DOT511Client.is_mjpeg_url("http://cam/mjpg/video.mjpg")              # True
 # List supported states
 python dot_511_client.py --list-states
 
-# List cameras in New York
-python dot_511_client.py --state ny --key YOUR_KEY
+# List cameras in Wisconsin
+python dot_511_client.py --state wi --cameras
 
-# Filter by roadway
-python dot_511_client.py --state ny --key YOUR_KEY --roadway "I-90" --active-only
+# List live streams only in New York
+python dot_511_client.py --state ny --cameras --streams-only
 
-# Get specific camera info
-python dot_511_client.py --state ny --key YOUR_KEY --camera-id Skyline-10012
+# Filter by highway
+python dot_511_client.py --state wi --cameras --roadway "I-41"
 
-# List all stream URLs
-python dot_511_client.py --state wi --key YOUR_KEY --streams-only --limit 50
+# Get traffic incidents in Wisconsin
+python dot_511_client.py --state wi --events --layer Incidents
+
+# Get all event types in Minnesota
+python dot_511_client.py --state mn --events
+
+# Get Minnesota RWIS weather stations
+python dot_511_client.py --state mn --rwis
+
+# Output JSON
+python dot_511_client.py --state mn --cameras --json
+
+# Debug logging
+python dot_511_client.py --state wi --cameras -v
 ```
 
 ---
 
-## Playing HLS Streams
+## Dependencies
 
-HLS streams can be played with standard video tools:
-
-**VLC:**
-```bash
-vlc "https://s51.nysdot.skyvdn.com:443/rtplive/R5_007/playlist.m3u8"
-```
-
-**ffmpeg (capture to file):**
-```bash
-ffmpeg -i "https://s51.nysdot.skyvdn.com:443/rtplive/R5_007/playlist.m3u8" \
-       -c copy output.mp4
-```
-
-**Python with hls-client or streamlink:**
-```bash
-pip install streamlink
-streamlink "https://s51.nysdot.skyvdn.com:443/rtplive/R5_007/playlist.m3u8" best
-```
-
-**In a web page (hls.js):**
-```html
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<video id="video" controls></video>
-<script>
-  var video = document.getElementById('video');
-  var hls = new Hls();
-  hls.loadSource('https://s51.nysdot.skyvdn.com:443/rtplive/R5_007/playlist.m3u8');
-  hls.attachMedia(video);
-</script>
-```
+- Python 3.7+
+- `requests` (optional but recommended): `pip install requests`
+- Falls back to `urllib` from the standard library if `requests` is not installed
 
 ---
 
-## Example: Multi-State Camera Survey
+## Notes on Specific States
 
-```python
-from dot_511_client import DOT511Client
+### Wisconsin (WI)
+- ~250+ cameras statewide
+- HLS streams at `cctv1.dot.wi.gov`
+- `direction` field is compass bearing in degrees (0 = North)
+- All 7 event layers available
 
-API_KEYS = {
-    "ny": "YOUR_NY_KEY",
-    "wi": "YOUR_WI_KEY",
-    "pa": "YOUR_PA_KEY",
-    "ak": "YOUR_AK_KEY",
-    "ut": "YOUR_UT_KEY",
-}
+### New York (NY)
+- Large deployment; hundreds of cameras
+- Multiple streaming servers (`s51` through `s58` on `nysdot.skyvdn.com`)
+- The `sourceId` determines which server; the videoUrl in the response specifies the correct server
 
-client = DOT511Client(api_keys=API_KEYS)
+### Pennsylvania (PA)
+- PA streams use `isVideoAuthRequired: true` in some cases
+- Stream URLs at `pa-se2.arcadis-ivds.com:8200`
+- Some cameras may require separate authentication to play
 
-for state_code in API_KEYS:
-    try:
-        cameras = client.get_cameras(state_code, with_stream_only=True, active_only=True)
-        print(f"{state_code.upper()}: {len(cameras)} active streaming cameras")
-    except Exception as e:
-        print(f"{state_code.upper()}: Error - {e}")
-```
+### Alaska (AK)
+- Primarily static roadway/weather cameras (RWIS type)
+- Few HLS live streams; most use static image snapshots
+- `images[].imageUrl` provides the preview path
 
----
+### Utah (UT)
+- UDOT Traffic portal
+- Mix of HLS and static cameras
 
-## Getting API Keys
+### Minnesota (MN)
+- ~1000+ cameras in the CARS system
+- MnDOT and contractor-owned cameras
+- RWIS stations available for road weather data
+- HLS streams at `video.dot.state.mn.us`
 
-1. Visit the developer page for your target state (listed in the table above)
-2. Click "Sign Up for an Account" or navigate to `/my511/register`
-3. Register with your email address
-4. Log in and navigate back to the developer page
-5. Request / view your Developer API key
+### Iowa (IA)
+- Iowa DOT CARS deployment
+- Similar structure to Minnesota
 
-All registrations are free. Keys are typically issued immediately.
-
----
-
-## Notes and Limitations
-
-- **New York (v1)**: Uses the older `/api/getcameras` endpoint. The response structure differs from v2 but is fully handled by this client. NY has ~2,900 cameras total (~1,750 with active streams).
-- **Virginia**: The 511VA website uses bot-protection middleware (JWT challenge) on unauthenticated requests. Authenticated API calls with a valid key work normally.
-- **Minnesota / Iowa**: Use Castle Rock Associates' newer SPA frontend; developer API docs are not at the standard `/developers/doc` path but the underlying Iteris API at `/api/v2/get/cameras` works with a valid key.
-- **All states**: Stream availability (`Disabled`, `Blocked`, view `Status`) changes in real time based on camera hardware status and maintenance windows.
-- **Wisconsin HLS host**: `cctv1.dot.wi.gov:443` — use this directly if you have a camera's source ID.
+### Virginia (VA)
+- Iteris TTRIP Angular SPA
+- Camera data requires authenticated browser session
+- Config endpoint (no auth): `https://511.vdot.virginia.gov/assets/config/config.json`
+- Backend: `https://data.511-atis-ttrip-prod.iteriscloud.com/`
+- Proxy: `https://511.vdot.virginia.gov/services/`
