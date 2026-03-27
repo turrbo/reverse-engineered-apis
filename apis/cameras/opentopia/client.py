@@ -332,12 +332,26 @@ class OpentopiaClient:
                 time.sleep(page_delay)
 
     def _parse_listing(self, soup: BeautifulSoup) -> list["Camera"]:
-        """Parse a camera listing page into Camera objects."""
+        """Parse a camera listing page into Camera objects.
+
+        Opentopia's listing pages use two cell types:
+          - div.cell_medium  (used in list views on hiddencam.php)
+          - div.cell_small   (used in sidebar / front page)
+        Each cell contains an <a href="/webcam/{id}"> link and location <span> tags.
+        """
         cameras = []
-        items = soup.select("ul.camgrid li")
+        seen_ids: set = set()
+
+        # Select all camera cells from the listing
+        # The real HTML uses div.cell_medium and div.cell_small
+        items = soup.select("div.cell_medium, div.cell_small")
+
+        # Fallback: legacy camgrid structure
+        if not items:
+            items = soup.select("ul.camgrid li")
 
         for item in items:
-            a_tag = item.find("a", href=True)
+            a_tag = item.find("a", href=re.compile(r"/webcam/\d+"))
             if not a_tag:
                 continue
             href = a_tag.get("href", "")
@@ -345,26 +359,22 @@ class OpentopiaClient:
             if not m:
                 continue
             cam_id = int(m.group(1))
+            if cam_id in seen_ids:
+                continue
+            seen_ids.add(cam_id)
 
-            # Title from alt attribute
-            img = a_tag.find("img", src=lambda s: s and "opentopia.com/cams" in s)
-            title = img.get("alt", f"Camera {cam_id}") if img else f"Camera {cam_id}"
+            # Title from <h3> or img alt
+            h3 = item.find("h3")
+            title = h3.get_text(strip=True) if (h3 and h3.get_text(strip=True)) else ""
+            if not title:
+                img = a_tag.find("img")
+                title = img.get("alt", f"Camera {cam_id}") if img else f"Camera {cam_id}"
 
-            # Location info from infos div
-            infos = item.find("div", {"class": "infos"})
-            country, region, city = "", "", ""
-            if infos:
-                name_div = infos.find("div", {"class": "viewcamsname"})
-                if name_div and name_div.get_text(strip=True):
-                    title = name_div.get_text(strip=True)
-                location_spans = infos.select("div.location span")
-                parts = [s.get_text(strip=True) for s in location_spans]
-                if len(parts) >= 1:
-                    country = parts[0]
-                if len(parts) >= 2:
-                    region = parts[1]
-                if len(parts) >= 3:
-                    city = parts[2]
+            # Location: <span>Country</span> | <span>Region</span> | <span>City</span>
+            spans = item.select("div span")
+            country = spans[0].get_text(strip=True) if len(spans) > 0 else ""
+            region  = spans[1].get_text(strip=True) if len(spans) > 1 else ""
+            city    = spans[2].get_text(strip=True) if len(spans) > 2 else ""
 
             cam = Camera(
                 id=cam_id,
@@ -470,13 +480,19 @@ class OpentopiaClient:
             if cm:
                 cam.num_comments = int(cm.group(1))
 
-        # --- Live video URL (viewmode=livevideo) ---
+        # --- Live video URL ---
+        # The default (savedstill) page only shows a static CDN image.
+        # Live URLs are only available in livestill/livevideo view modes which
+        # require HTTP + _redirected=1 (see get_camera_with_live_url / get_live_still_url).
+        # We intentionally leave cam.live_url empty here for performance;
+        # call get_camera_with_live_url(id) to populate it.
         big_div = soup.find("div", {"class": "big"})
         if big_div:
             live_img = big_div.find("img")
             if live_img:
                 src = live_img.get("src", "")
-                if src and "opentopia.com" not in src and src != "/images/new_icon.gif":
+                if (src and "opentopia.com" not in src and src != "/images/new_icon.gif"
+                        and src.startswith("http")):
                     cam.live_url = src
 
         # --- Historical snapshot URLs (m-1 through m-6) ---
@@ -510,22 +526,69 @@ class OpentopiaClient:
         """
         Like get_camera() but also fetches the live MJPEG/video URL
         by loading viewmode=livevideo.
+
+        NOTE: Live stream pages are HTTP-only on Opentopia.  The HTTPS version
+        returns a redirect comment pointing to:
+            http://www.opentopia.com/webcam/{id}?viewmode=livevideo&_redirected=1
+        This method follows that pattern automatically.
         """
         cam = self.get_camera(camera_id)
         if cam.live_url:
             return cam
 
-        url = f"{self.BASE_URL}/webcam/{camera_id}"
-        resp = self._get(url, params={"viewmode": "livevideo"})
-        soup = BeautifulSoup(resp.text, "html.parser")
+        # Live stream pages require HTTP + _redirected=1 parameter
+        http_url = f"http://www.opentopia.com/webcam/{camera_id}"
+        resp = self._get(http_url, params={"viewmode": "livevideo", "_redirected": "1"})
+        content = resp.text
+
+        # MJPEG stream is in: <div style="z-index:100;width:715px;background:#fff">
+        #   <img src="http://host/mjpg/video.mjpg" ...>
+        mjpeg_m = re.search(
+            r'z-index:100;width:715px[^>]*><img\s+src="([^"]+)"',
+            content
+        )
+        if mjpeg_m:
+            src = mjpeg_m.group(1)
+            if src and "opentopia.com" not in src and src != "/images/new_icon.gif":
+                cam.live_url = src
+                return cam
+
+        # Also try BeautifulSoup fallback
+        soup = BeautifulSoup(content, "html.parser")
         big_div = soup.find("div", {"class": "big"})
         if big_div:
             live_img = big_div.find("img")
             if live_img:
                 src = live_img.get("src", "")
-                if src and src != "/images/new_icon.gif":
+                if src and "opentopia.com" not in src and src != "/images/new_icon.gif":
                     cam.live_url = src
         return cam
+
+    def get_live_still_url(self, camera_id: int) -> str:
+        """
+        Return the direct upstream still-image URL for the camera.
+
+        This is the URL that Opentopia embeds in the ``livestill`` view mode.
+
+        Examples:
+          - Axis camera:      ``http://<host>/jpg/image.jpg``
+          - Panasonic camera: ``http://<host>/snapshotJPEG?Resolution=640x480&Quality=Clarity``
+
+        Returns an empty string if not available.
+
+        NOTE: Uses HTTP with ``_redirected=1`` to bypass Opentopia's HTTPS→HTTP redirect.
+        """
+        http_url = f"http://www.opentopia.com/webcam/{camera_id}"
+        resp = self._get(http_url, params={"viewmode": "livestill", "_redirected": "1"})
+        content = resp.text
+
+        # Still image: <img src="..." id="stillimage" ...>
+        m = re.search(r'<img\s+src="([^"]+)"\s+id="stillimage"', content)
+        if m:
+            src = m.group(1)
+            if src and "opentopia.com" not in src:
+                return src
+        return ""
 
     def get_comments(self, camera_id: int) -> list["Comment"]:
         """

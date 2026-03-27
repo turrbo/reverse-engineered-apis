@@ -553,6 +553,34 @@ print(f"Live: {status['live_available']}, Is old: {status['isOld']}")
 print(SkiresortWebcamClient.build_cdn_image_url("feratel_livestream", "146"))
 print(SkiresortWebcamClient.build_status_url("panomax_webcams", "659"))
 print(SkiresortWebcamClient.build_feratel_stream_url("5604", "20F52598-D6F3-448C-A38B-EC5071B837EA"))
+
+# --- Webcam archive ---
+
+# Fetch full archive index (dates + filenames, going back ~4 months)
+archive = client.get_webcam_archive("feratel_livestream", "146")
+for year, months in archive["archive"].items():
+    for month, days in months.items():
+        for day, entries in days.items():
+            for e in entries:
+                print(e["filename"])  # e.g. "2026/03/27/11_31.jpg"
+
+# Get URL for a specific archived image
+img_url = client.get_archive_image_url("feratel_livestream", "146", "2026/03/27/11_31.jpg")
+thumb_url = client.get_archive_image_url("feratel_livestream", "146", "2026/03/27/11_31.jpg", thumbnail=True)
+
+# Get the most recent archived image URL
+latest = client.get_latest_archive_image_url("feratel_livestream", "146")
+
+# Iterate archive images for a specific day
+for img in client.iter_archive_images("feratel_livestream", "146", year=2026, month=3, day=27):
+    print(img["filename"], img["image_url"])
+
+# --- YouTube webcams (North America) ---
+big_sky = client.get_resort_webcams("big-sky-resort")
+for cam in big_sky["webcams"]:
+    if cam["folder"] == "youtube_livestreams":
+        yt_id = SkiresortWebcamClient.extract_youtube_id(cam["folder"], cam.get("image_url", ""))
+        print(f"YouTube stream: https://www.youtube.com/watch?v={yt_id}")
 ```
 
 ---
@@ -598,12 +626,15 @@ Recommended: 1-2 seconds between requests.
 
 The site aggregates webcams from multiple providers. The `data-folder` attribute identifies the provider:
 
-| Folder | Provider | Stream Type |
-|--------|----------|-------------|
-| `feratel_livestream` | Feratel (Austria/Germany) | Live MJPEG / HLS via iframe |
-| `panomax_webcams` | Panomax (panoramic cams) | Static + 360° interactive |
-| `itwms_webcams_images` | ITWMS | Refreshing JPEG |
-| `webcams` | Various direct feeds | Refreshing JPEG |
+| Folder | Provider | Stream Type | Image Prefix |
+|--------|----------|-------------|--------------|
+| `feratel_livestream` | Feratel (Austria/Germany) | Live MJPEG / HLS via iframe | `livestream_37_{id}` |
+| `panomax_webcams` | Panomax (panoramic cams) | Static + 360° interactive | `panomax_reduced{id}` |
+| `itwms_webcams_images` | ITWMS | Refreshing JPEG | `itwms_{md5hash}` |
+| `webcams` | Various direct feeds | Refreshing JPEG | `webcam_{id}` |
+| `youtube_livestreams` | YouTube (embedded) | HLS live stream | `youtube_{video_id}` |
+| `roundshot_webcams` | Roundshot | 360° panorama | `roundshot_{id}` |
+| `webcamera_webcams` | Webcamera.pl | Refreshing JPEG | `webcamera_{id}` |
 
 ### Feratel Integration
 
@@ -629,6 +660,17 @@ The hash is derived from the source URL of the camera feed, so it cannot be pred
 
 ## JavaScript Architecture Notes
 
+The site loads two relevant JS bundles:
+- `jsFooterV3.gz.js` — Main site JS (status2.json loading, webcam status via IntersectionObserver)
+- `webcamArchive.gz.js` — Archive viewer JS (loaded only on individual webcam detail pages)
+
+The `webcamArchive.gz.js` bundle (77KB) reveals:
+- The archive endpoint is `archive2.json` (not `archive.json` — that returns 404)
+- Preview/thumbnail images use `preview_` prefix before the time component
+- The JavaScript variable `a` is set to `{archive_domain}/typo3temp/_processed_/cams_archive/`
+- Full archive image URL: `${a}${webcamFolderName}/${webcamId}/${filename}`
+- Thumbnail URL: `${a}${webcamFolderName}/${webcamId}/${date}/preview_${time}`
+
 The JavaScript bundle (`jsFooterV3.gz.js`) reveals:
 
 1. **ajaxURL**: `"index.php?type=997"` — used for teaser/teaserOut tracking
@@ -648,9 +690,37 @@ The JavaScript bundle (`jsFooterV3.gz.js`) reveals:
 curl "https://www.skiresort-service.com/typo3temp/_processed_/cams_archive/feratel_livestream/146/status2.json"
 # → {"status":{"live_available":true,"isOld":false,"last_thumbnail_success":1774629093}}
 
-# Same for panomax
-curl "https://www.skiresort-service.com/typo3temp/_processed_/cams_archive/panomax_webcams/659/status2.json"
-# → {"status":{"live_available":true,"isOld":false,"last_thumbnail_success":1774629682}}
+# Webcam status for standard webcam
+curl "https://www.skiresort-service.com/typo3temp/_processed_/cams_archive/webcams/30575/status2.json"
+# → {"status":{"live_available":true,"isOld":false,"last_thumbnail_success":1774627598}}
+
+# YouTube livestream status
+curl "https://www.skiresort-service.com/typo3temp/_processed_/cams_archive/youtube_livestreams/1036/status2.json"
+# → {"status":{"live_available":true,"isOld":false,"last_thumbnail_success":1774627895}}
+
+# Archive index for a webcam (returns 4+ months of history)
+curl "https://www.skiresort-service.com/typo3temp/_processed_/cams_archive/feratel_livestream/146/archive2.json"
+# → {"archive":{"2025":{"12":{"01":[{"filename":"2025/12/01/11_41.jpg",...}],...}}},"status":{...}}
+
+# Archive image (full resolution)
+curl -I "https://www.skiresort-service.com/typo3temp/_processed_/cams_archive/feratel_livestream/146/2026/03/27/11_31.jpg"
+# → HTTP/2 200
+
+# Archive image (thumbnail)
+curl -I "https://www.skiresort-service.com/typo3temp/_processed_/cams_archive/webcams/30575/2025/10/28/preview_11_33.jpg"
+# → HTTP/2 200
+
+# Current live image - feratel
+curl -I "https://www.skiresort-service.com/typo3temp/_processed_/_cams_/livestream_37_146.jpg"
+# → HTTP/2 200
+
+# Current live image - panomax (note: panomax_reduced, NOT livestream_37)
+curl -I "https://www.skiresort-service.com/typo3temp/_processed_/_cams_/panomax_reduced4052641.jpg"
+# → HTTP/2 200
+
+# Current live image - YouTube thumbnail
+curl -I "https://www.skiresort-service.com/typo3temp/_processed_/_cams_/youtube_dMr-Jt_K3Cc.jpg"
+# → HTTP/2 200
 
 # Austria resort list (JSON)
 curl -H "X-Requested-With: XMLHttpRequest" \

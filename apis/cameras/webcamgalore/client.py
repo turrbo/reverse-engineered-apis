@@ -587,30 +587,54 @@ class WebcamGaloreClient:
         """
         Scrape webcam listings for a country (or state within a country).
 
-        WebcamGalore organises listings alphabetically and paginates them.
-        Each page URL is: /{Country}/[{State}/]{letter}-{page}.html
+        URL structure (discovered via reverse engineering)
+        --------------------------------------------------
+        Large countries use alphabetical pagination:
+          GET /{Country}/a-1.html    (page 1, ~10 webcams each)
+          GET /{Country}/a-2.html    (page 2)
+          ...
+          GET /{Country}/a-N.html    (last page)
+
+        Small countries use a single page:
+          GET /{Country}/countrycam-0.html
+
+        With state/region:
+          GET /{Country}/{State}/a-1.html
+
+        NOTE: The ``letter`` parameter here is the pagination prefix character
+        (always "a" in practice on the live site — it is NOT an alphabetical filter).
+        Page numbers are integers (1, 2, 3 ...).
 
         Parameters
         ----------
         country : str   e.g. "Germany"
-        state : str     Optional state e.g. "Bavaria"
-        letter : str    Starting letter for alphabetical filter (a-z)
-        max_pages : int Maximum number of pages to fetch per letter
+        state : str     Optional state/region slug e.g. "Bavaria", "Lombardy"
+        letter : str    Pagination prefix (default "a", always "a" on live site)
+        max_pages : int Maximum number of pages to fetch
 
         Returns
         -------
-        list of dicts with keys: cam_id, country, city
+        list of dicts with keys: cam_id, country, city, url
         """
         results = []
         base = f"{BASE_URL}/{country}"
         if state:
             base = f"{base}/{state}"
 
+        # Try paginated a-N.html first
         for page in range(1, max_pages + 1):
             url = f"{base}/{letter}-{page}.html"
             try:
                 resp = self._get(url)
             except Exception:
+                if page == 1:
+                    # Small country — try countrycam-0.html fallback
+                    try:
+                        resp = self._get(f"{base}/countrycam-0.html")
+                        new = _extract_webcam_links_from_listing(resp.text)
+                        results.extend(new)
+                    except Exception:
+                        pass
                 break
 
             html = resp.text
@@ -622,6 +646,11 @@ class WebcamGaloreClient:
             if not new:
                 break
             results.extend(new)
+
+            # Check if more pages exist by looking at pagination links
+            page_nums = {int(p) for p in re.findall(rf"/{re.escape(letter)}-(\d+)\.html", html)}
+            if page_nums and page >= max(page_nums):
+                break
 
         # Deduplicate by cam_id
         seen = set()
@@ -942,29 +971,67 @@ class WebcamGaloreClient:
     # Search
     # -----------------------------------------------------------------------
 
-    def search(self, query: str) -> list[Webcam]:
+    def search(self, query: str, max_pages: int = 5) -> list[Webcam]:
         """
-        Search webcams by location name.
+        Search webcams by location name or keyword.
         Uses the search.php endpoint (returns an HTML page).
+
+        Pagination
+        ----------
+        Results are returned 10 per page. Use the ``start`` parameter for page N:
+          GET /search.php?s={query}&start={N}   (N=1 is page 1, N=2 is page 2, etc.)
+
+        A search for "beach" returns 71 pages (711 results total).
+
+        Parameters
+        ----------
+        query     : str  Free-text search term
+        max_pages : int  Maximum pages to fetch (default 5 = up to 50 results)
 
         Returns
         -------
         list of Webcam (partial metadata: id, city, country)
         """
-        url = f"{BASE_URL}/search.php?s={quote(query)}"
-        resp = self._get(url)
-        html = resp.text
-
         webcams = []
-        for m in re.finditer(
-            r'href="https://www\.webcamgalore\.com/webcam/([^/]+)/([^/]+)/(\d+)\.html"',
-            html,
-        ):
-            country, city, cam_id = m.group(1), m.group(2), int(m.group(3))
-            city_display = city.replace("-", " ")
-            webcams.append(Webcam(cam_id=cam_id, title="", city=city_display, country=country))
+        seen_ids: set[int] = set()
 
-        # Deduplicate
+        for page in range(1, max_pages + 1):
+            if page == 1:
+                url = f"{BASE_URL}/search.php?s={quote(query)}"
+            else:
+                url = f"{BASE_URL}/search.php?s={quote(query)}&start={page}"
+
+            try:
+                resp = self._get(url)
+            except Exception:
+                break
+
+            html = resp.text
+
+            page_cams = []
+            for m in re.finditer(
+                r'href="https://www\.webcamgalore\.com/webcam/([^/]+)/([^/]+)/(\d+)\.html"',
+                html,
+            ):
+                country, city, cam_id = m.group(1), m.group(2), int(m.group(3))
+                if cam_id not in seen_ids:
+                    seen_ids.add(cam_id)
+                    city_display = city.replace("-", " ")
+                    page_cams.append(
+                        Webcam(cam_id=cam_id, title="", city=city_display, country=country)
+                    )
+
+            if not page_cams:
+                break  # No more results
+
+            webcams.extend(page_cams)
+
+            # Detect total pages from pagination links (&start=N)
+            page_nums = {int(p) for p in re.findall(r"&start=(\d+)", html)}
+            if page_nums and page >= max(page_nums):
+                break  # Reached the last page
+
+        # Deduplicate (safety net)
         seen = set()
         unique = []
         for w in webcams:
@@ -997,6 +1064,81 @@ class WebcamGaloreClient:
         except Exception:
             pass
         return []
+
+    # -----------------------------------------------------------------------
+    # Complete A-Z index (all 8000+ cameras)
+    # -----------------------------------------------------------------------
+
+    def iter_all_webcam_urls(self) -> Generator[str, None, None]:
+        """
+        Yield every webcam detail-page URL from the A-Z complete index.
+
+        Endpoint pattern: GET /complete-{letter}.html  (26 pages, one per letter)
+
+        Each letter page contains hundreds of webcam links grouped by country.
+        Total across all 26 letters: 8000+ unique webcam URLs.
+        Deduplicates automatically.
+
+        Yields
+        ------
+        str : canonical webcam detail URL
+        """
+        seen: set[str] = set()
+        for letter in "abcdefghijklmnopqrstuvwxyz":
+            try:
+                resp = self._get(f"{BASE_URL}/complete-{letter}.html")
+            except Exception:
+                continue
+            for m in re.finditer(
+                r'href="(https://(?:www\.)?webcamgalore\.com/webcam/[^"]+\.html)"',
+                resp.text,
+            ):
+                u = m.group(1)
+                if u not in seen:
+                    seen.add(u)
+                    yield u
+
+    def iter_all_webcams(
+        self, fetch_details: bool = False
+    ) -> Generator[Webcam, None, None]:
+        """
+        Iterate over every webcam on the site (~8000+).
+
+        Parameters
+        ----------
+        fetch_details : bool
+            If False (default), yields minimal Webcam objects built from URL alone.
+            If True, fetches each detail page for full metadata
+            (8000+ requests, ~2-3 hours with default rate limiting).
+
+        Yields
+        ------
+        Webcam objects
+        """
+        for url in self.iter_all_webcam_urls():
+            m = re.match(
+                r"https://(?:www\.)?webcamgalore\.com/webcam/([^/]+)/([^/]+)/(\d+)\.html",
+                url,
+            )
+            if not m:
+                continue
+            country, city_slug, cam_id = m.group(1), m.group(2), int(m.group(3))
+            city = city_slug.replace("-", " ")
+
+            if fetch_details:
+                try:
+                    cam = self.get_webcam_detail(cam_id, country, city_slug)
+                    if cam:
+                        yield cam
+                except Exception:
+                    pass
+            else:
+                yield Webcam(
+                    cam_id=cam_id,
+                    title="",
+                    city=city,
+                    country=country,
+                )
 
     # -----------------------------------------------------------------------
     # Feeds

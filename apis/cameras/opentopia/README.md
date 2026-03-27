@@ -50,20 +50,39 @@ https://www.opentopia.com/hiddencam.php?showmode=standard&country=United+States%
 https://www.opentopia.com/hiddencam.php?showmode=standard&country=%2A&seewhat=random&p=1
 ```
 
-**Parsed HTML structure:**
+**Parsed HTML structure (actual observed):**
 ```html
-<ul class="camgrid camgrid3">
-  <li>
-    <a href="/webcam/18334">
-      <img src="https://images.opentopia.com/cams/18334/medium.jpg" alt="Webcam in Paris,France" />
+<!-- Standard grid cells (div.cell_medium in listing, div.cell_small in sidebar) -->
+<div class="cell_medium">
+  <div class="listcam">
+    <a href="/webcam/18334" target="_self">
+      <img src="https://images.opentopia.com/cams/18334/tiny.jpg"
+           width="80" height="60" alt="Webcam in Paris,France" />
     </a>
-    <div class="infos">
-      <div class="viewcamsname">Eiffel Tower View</div>
-      <div class="location"><span>France</span> | <span>Île-de-France</span> | <span>Paris</span></div>
+  </div>
+  <div class="listcaminfo">
+    <h3>Eiffel Tower View</h3>
+    <div class="infoleft">
+      <div><span>France</span> | <span>Île-de-France</span> | <span>Paris</span></div>
     </div>
-  </li>
-  ...
-</ul>
+    <div class="inforight">
+      <div class="rank">...</div>
+      <div class="camrankinfo">3.00 from 2 votes</div>
+    </div>
+  </div>
+</div>
+<div class="hotline"></div>
+```
+
+The "hot cam" (featured camera on front page) uses class `featuredcam span-9` with a larger image:
+```html
+<div id="hotcam" class="featuredcam span-9">
+  <div class="cam">
+    <a href="/webcam/12343" target="_self">
+      <img src="https://images.opentopia.com/cams/12343/medium.jpg" width="321" height="240" />
+    </a>
+  </div>
+</div>
 ```
 
 ---
@@ -234,11 +253,29 @@ var cam_country_name = "United States";
 **Live video URL** (from `?viewmode=livevideo`):
 ```html
 <div class="big">
-  <div style="z-index:100;width:715px">
-    <img src="http://statenisland.dnsalias.net/mjpg/video.mjpg" />
+  <div style="z-index:100;width:715px;background:#fff">
+    <img src="http://statenisland.dnsalias.net/mjpg/video.mjpg" width="715"
+         style="z-index:100;width:715px;height:auto" />
   </div>
 </div>
 ```
+
+**Live still URL** (from `?viewmode=livestill`):
+```html
+<img src="http://statenisland.dnsalias.net/jpg/image.jpg" id="stillimage"
+     width="715" style="width:715px;height:auto" />
+```
+
+**IMPORTANT — HTTP redirect for live streams:**
+Live stream view modes (`livestill`, `livevideo`, `refreshingstill`) serve HTTP-only
+upstream camera URLs. When accessed over HTTPS, Opentopia returns a redirect hint:
+```html
+<!-- viewmode: livestill -->
+<!-- is_https: yes -->
+<!-- should redirect to http -->
+<!-- redirect to http://www.opentopia.com/webcam/12343?viewmode=livestill&_redirected=1 -->
+```
+To obtain live stream URLs, fetch the page over **HTTP** with `&_redirected=1` appended.
 
 ---
 
@@ -379,7 +416,10 @@ print(cam.longitude)      # -74.1786
 print(cam.country)        # "United States"
 print(cam.brand)          # "Axis"
 print(cam.url_big)        # "https://images.opentopia.com/cams/12343/big.jpg"
-print(cam.live_url)       # "http://statenisland.dnsalias.net/mjpg/video.mjpg"
+print(cam.live_url)       # "http://statenisland.dnsalias.net/mjpg/video.mjpg"  (MJPEG)
+# For live still image URL separately:
+still_url = client.get_live_still_url(12343)
+print(still_url)          # "http://statenisland.dnsalias.net/jpg/image.jpg"
 
 # Get snapshot URLs
 thumb = client.get_thumbnail_url(12343)    # tiny.jpg
@@ -449,7 +489,8 @@ OpentopiaClient(
 | Method | Description |
 |--------|-------------|
 | `get_camera(camera_id)` | Full metadata for a camera |
-| `get_camera_with_live_url(camera_id)` | Metadata + live MJPEG URL |
+| `get_camera_with_live_url(camera_id)` | Metadata + live MJPEG URL (HTTP, `_redirected=1`) |
+| `get_live_still_url(camera_id)` | Direct upstream still-image URL (HTTP, `_redirected=1`) |
 | `get_comments(camera_id)` | All user comments |
 
 #### Images
@@ -579,12 +620,65 @@ class Comment:
 
 ---
 
+## Live Upstream URL Patterns
+
+When a camera has a live feed, the upstream URL is embedded in the `livestill` / `livevideo` view pages (HTTP only). The URL pattern depends on the camera brand:
+
+### Axis cameras (most common)
+```
+Still image:   http://<host>[:<port>]/jpg/image.jpg
+MJPEG stream:  http://<host>[:<port>]/mjpg/video.mjpg
+```
+Examples:
+- `http://statenisland.dnsalias.net/jpg/image.jpg`
+- `http://statenisland.dnsalias.net/mjpg/video.mjpg`
+- `http://87.191.195.96:8080/mjpg/video.mjpg`
+- `http://213.226.216.218:80/jpg/image.jpg`
+- `http://213.226.216.218:80/mjpg/video.mjpg`
+- `http://flightcam2.pr.erau.edu/jpg/image.jpg`
+
+### Panasonic cameras
+```
+Still image:   http://<host>/snapshotJPEG?Resolution=640x480&Quality=Clarity
+              OR  http://<host>/snapshotJPEG?resolution=320x240
+```
+No MJPEG stream available — Panasonic cameras only appear in `savedstill`/`animated` modes.
+
+Examples:
+- `http://220.254.170.16/snapshotJPEG?Resolution=640x480&Quality=Clarity`
+- `http://sagamiharagreen.miemasu.net/snapshotJPEG?Resolution=640x480&Quality=Clarity`
+- `http://cam-yokohama.miemasu.net:8001/snapshotJPEG?resolution=320x240`
+
+### Getting live URLs in Python
+
+```python
+client = OpentopiaClient()
+
+# MJPEG stream URL
+cam = client.get_camera_with_live_url(12343)
+print(cam.live_url)  # "http://statenisland.dnsalias.net/mjpg/video.mjpg"
+
+# Still image URL
+still_url = client.get_live_still_url(12343)
+print(still_url)     # "http://statenisland.dnsalias.net/jpg/image.jpg"
+
+# Stream in VLC: vlc <mjpeg_url>
+# Stream in Python requests:
+import requests
+r = requests.get(cam.live_url, stream=True)
+for chunk in r.iter_content(chunk_size=4096):
+    # parse MJPEG frames...
+    pass
+```
+
+---
+
 ## Known Camera Brands
 
 The site catalogs cameras from various manufacturers:
-- **Axis** (most common, ~MJPEG streaming)
+- **Axis** (most common; exposes MJPEG stream at `/mjpg/video.mjpg` and still at `/jpg/image.jpg`)
+- **Panasonic** (still at `/snapshotJPEG`, no MJPEG stream)
 - **Mobotix** (MJPEG)
-- **Panasonic**
 - **Sony**
 - **Vivotek**
 - Various generic/unknown IP cameras

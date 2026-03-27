@@ -1265,20 +1265,37 @@ class SkylineWebcamsClient:
             )
         html = self._get(url)
 
-        # Find the nearby section
+        # Find the nearby section — look for the "NEARBY WEBCAMS" collapse panel.
+        # The HTML structure:
+        #   <a ... href="#col-near" ...>NEARBY WEBCAMS...</a>
+        #   <div id="col-near" ...>
+        #     <div id="cams_near">
+        #       <a href="/en/webcam/..."><div class="cam-light white">...</div></a>
+        #     ...
         nearby_m = re.search(
-            r'id="tab_near"(.*?)(?:</div>\s*</div>\s*</div>|id="tab_photo")',
+            r'id="col-near"[^>]*>(.*?)(?:</div>\s*</div>\s*</div>\s*</div>|id="col-photo")',
             html, re.S
         )
         if not nearby_m:
-            return []
+            # Fallback: use _extract_cam_cards on the whole page, excluding current cam
+            cards = _extract_cam_cards(html)
+            # Filter out the current camera's cam_id
+            current_id = cam.cam_id
+            return [
+                {"url": BASE_URL + c["url"] if not c["url"].startswith("http") else c["url"],
+                 "name": c["name"],
+                 "cam_id": c["cam_id"]}
+                for c in cards if c["cam_id"] != current_id
+            ]
 
         section = nearby_m.group(1)
-        links = re.findall(
-            r'<a href="(/[a-z]{2}/webcam/[^"]+\.html)"[^>]*>.*?<p[^>]*>([^<]+)</p>',
-            section, re.S
-        )
-        return [{"url": BASE_URL + href, "name": name.strip()} for href, name in links]
+        cards = _extract_cam_cards(section)
+        return [
+            {"url": BASE_URL + c["url"] if not c["url"].startswith("http") else c["url"],
+             "name": c["name"],
+             "cam_id": c["cam_id"]}
+            for c in cards
+        ]
 
 
 # ---------------------------------------------------------------------------
