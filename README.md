@@ -41,6 +41,7 @@ Collection of unofficial API clients built by reverse-engineering websites' hidd
 | [NeuronWriter](apis/marketing/neuronwriter/) | `apis/marketing/neuronwriter/` | Auth required | SEO content optimization, SERP analysis, NLP terms, competitors (API key + session auth) |
 | [Taja AI](apis/marketing/taja/) | `apis/marketing/taja/` | Auth required | YouTube video optimization, titles, descriptions, tags, thumbnails (login required) |
 | [Skimming AI](apis/marketing/skimming/) | `apis/marketing/skimming/` | Auth required | Redirects to NeuronWriter -- same CONTADU platform, content summarization |
+| [Mavely Creators](apis/marketing/mavely/) | `apis/marketing/mavely/` | Auth required | 84 GraphQL ops, 1000+ affiliate brands, tracked links, analytics, earnings, promotions, creator shops (Auth0 ROPC) |
 
 ## Productivity
 
@@ -178,6 +179,7 @@ apis/
     neuronwriter/       # SEO tool, API key + session auth (needs valid credentials)
     taja/               # YouTube optimizer, login required (needs valid credentials)
     skimming/           # Redirects to NeuronWriter (same platform)
+    mavely/             # 84 GraphQL ops, 1000+ affiliate brands, Auth0 ROPC
   productivity/
     getrecall/          # Full access, 50+ endpoints, Firebase auth
   education/
