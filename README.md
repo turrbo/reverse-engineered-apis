@@ -20,6 +20,7 @@ Collection of unofficial API clients built by reverse-engineering websites' hidd
 | [LoopNet](apis/real-estate/loopnet/) | `apis/real-estate/loopnet/` | Akamai-protected | Commercial real estate, endpoints mapped but blocked by Akamai Bot Manager |
 | [Crexi](apis/real-estate/crexi/) | `apis/real-estate/crexi/` | Cloudflare-protected | 16 commercial real estate endpoints, property search, auctions, market data |
 | [PropertyShark](apis/real-estate/propertyshark/) | `apis/real-estate/propertyshark/` | Cloudflare-protected | 18 endpoints mapped, property data/ownership/tax records, requires paid subscription |
+| [Regrid](apis/real-estate/regrid/) | `apis/real-estate/regrid/` | Full access | 155M+ US parcels, 118 fields, tile server with filtered layers, 5 free lookups/day (session cookie) |
 
 ## Entertainment
 
@@ -170,6 +171,7 @@ apis/
     loopnet/            # Commercial RE, Akamai Bot Manager blocks all access
     crexi/              # 16 endpoints, Cloudflare-protected
     propertyshark/      # 18 endpoints, Cloudflare + paid subscription required
+    regrid/             # 155M+ parcels, 118 fields, tile server, 5 free lookups/day
   entertainment/
     artistly/           # Full access, login-based auth (Laravel/CSRF)
   technology/
